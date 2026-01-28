@@ -1,0 +1,13 @@
+[project]
+name = "franking"
+version = "0.1.0"
+description = "A simple REST API for generating and printing Internetmarken"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "brother-ql>=0.9.4",
+    "fastapi[standard]>=0.128.0",
+    "inema>=1.0.4",
+    "pycountry>=24.6.1",
+    "python-dotenv>=1.2.1",
+]
