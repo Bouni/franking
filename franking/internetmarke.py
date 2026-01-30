@@ -1,4 +1,5 @@
 import os
+import zipfile
 
 import inema.rest as ir
 from dotenv import load_dotenv
@@ -60,7 +61,14 @@ class Internetmarke:
     def user_profile(self):
         return self.session.profile()
 
-    def order(self, receiver: Address, product: int):
+    def _extract_zip(self, filename: str):
+        with zipfile.ZipFile(f"labels/{filename}.zip", "r") as zip_ref:
+            zip_ref.extract("0.png", "labels")
+            os.rename("labels/0.png", f"labels/{filename}.png")
+
+    def order(
+        self, invoice: str, receiver: Address, product: int, dryrun: bool = False
+    ):
         oid = self.session.create_order()
         p = ir.mk_png_pos(
             product,
@@ -81,6 +89,11 @@ class Internetmarke:
         )
         t = ir.calc_total(p)
         body = ir.mk_png_req(oid, p, t)
-        fn = "label.zip"
-        d = self.session.checkout_png(body, fn)
+        fn = f"{invoice}.zip"
+        if not dryrun:
+            d = self.session.checkout_png(body, fn)
+            self._extract_zip(invoice)
+        else:
+            d = None
+            self._extract_zip("label")
         return {"oid": oid, "p": p, "t": t, "fn": fn, "d": d}

@@ -1,22 +1,35 @@
+import os
 import sqlite3
 from pathlib import Path
+import logging
 
 import pycountry
-from fastapi import Depends, FastAPI, HTTPException
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
-from franking.api import Internetmarke
-from franking.models import Address, ItemList
+from franking.internetmarke import Internetmarke
+from franking.models import Address
 from franking.printer import BrotherQL
+
+load_dotenv()
+
+DEBUG = os.getenv("DEBUG", default=False)
+DB_PATH = os.getenv("DB_PATH", default="/opt/docker/invio/data/invio.db")
 
 BASE_PATH = Path(__file__).resolve().parent.parent
 
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
+
+templates = Jinja2Templates(directory="templates")
 
 
 def get_db():
     conn = sqlite3.connect(
-        "file:/opt/docker/invio/data/invio.db?mode=ro&immutable=1", uri=True
+        f"file:{DB_PATH}?mode=ro&immutable=1", uri=True
     )
     conn.row_factory = sqlite3.Row
     try:
@@ -25,64 +38,100 @@ def get_db():
         conn.close()
 
 
-@app.get("/profile")
-def user_profile():
+@app.get("/", response_class=HTMLResponse)
+def index(
+    request: Request,
+    db: sqlite3.Connection = Depends(get_db),
+):
     im = Internetmarke()
-    return {"profile": im.user_profile()}
-
-
-@app.get("/check-health")
-def check_health():
-    im = Internetmarke()
-    return {"health": im.check_health()}
-
-
-@app.get("/balance")
-def balance():
-    im = Internetmarke()
-    return {"balance": im.get_balance()}
-
-
-@app.get("/formats")
-def formats():
-    im = Internetmarke()
-    return {"formats": im.get_formats()}
-
-
-@app.get("/products")
-def products():
-    im = Internetmarke()
-    return {"products": im.get_products()}
-
-
-@app.post("/internetmarke")
-def internetmarke(address: Address, itemList: ItemList):
-    try:
-        address.country = pycountry.countries.get(
-            alpha_2=address.country.upper()
-        ).alpha_3
-    except:
-        raise HTTPException(status_code=400, detail="Invalid country code")
-    im = Internetmarke()
-    return {"result": im.order(address, 21)}
-
-
-@app.get("/print")
-def print_label(fn: str):
-    ql = BrotherQL()
-    ql.print_label(BASE_PATH / "labels/0.png")
-    return {"result": "success"}
-
-
-@app.get("/order")
-def get_invio_order_data(id: str, db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
-    cursor.execute(
-        f"SELECT description,quantity,unit_price FROM invoice_items WHERE invoice_id = '{id}' AND description LIKE '%Versand%'"
+    cursor.execute("""
+        SELECT 
+            ii.invoice_id,
+            ii.description,
+            ii.quantity,
+            ii.unit_price,
+            c.name,
+            c.contact_name,
+            c.address,
+            c.postal_code,
+            c.city,
+            c.country_code
+        FROM invoice_items ii
+        INNER JOIN invoices i ON ii.invoice_id = i.id
+        INNER JOIN customers c ON i.customer_id = c.id
+        WHERE ii.description LIKE '%Versand%'
+        ORDER BY i.created_at DESC
+    """)
+    orders = cursor.fetchall()
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"orders": orders, "balance": im.get_balance()},
     )
-    shipping = cursor.fetchone()
-    cursor.execute(
-        f"SELECT name,address,postal_code,city,country_code FROM invoices INNER JOIN customers ON invoices.customer_id = customers.id WHERE invoices.id = '{id}'"
-    )
-    address = cursor.fetchone()
-    return {"shipping": {**dict(shipping)}, "address": {**dict(address)}}
+
+
+@app.post("/print/{invoice_id}")
+def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
+    # fetch invoice data from db
+    cursor = db.cursor()
+    cursor.execute(f"""
+        SELECT 
+            ii.invoice_id,
+            ii.description,
+            ii.quantity,
+            ii.unit_price,
+            c.name,
+            c.contact_name,
+            c.address,
+            c.postal_code,
+            c.city,
+            c.country_code
+        FROM invoice_items ii
+        INNER JOIN invoices i ON ii.invoice_id = i.id
+        INNER JOIN customers c ON i.customer_id = c.id
+        WHERE ii.description LIKE '%Versand%' AND
+        i.id = '{invoice_id}'
+    """)
+    invoice = cursor.fetchone()
+
+    if invoice:
+        invoice = dict(invoice)
+
+        # try converting 2-letter country code into 3-letter country code
+        try:
+            invoice["country_code"] = pycountry.countries.get(
+                alpha_2=invoice["country_code"].upper()
+            ).alpha_3
+        except:
+            return Response(status_code=status.HTTP_400_BAD_REQUEST)
+
+        # create address from data
+        address = Address(
+            name=invoice["name"],
+            address=invoice["address"],
+            city=invoice["city"],
+            postcode=invoice["postal_code"],
+            country=invoice["country_code"],
+        )
+
+        # Figure out the right product code
+        product_code = 21 if invoice["country_code"] == "DEU" else 10051
+
+        # get Internetmarke
+        im = Internetmarke()
+        if DEBUG:
+            logging.info("DEBUG active, Internetmarke dryrun")
+        im.order(invoice["invoice_id"], address, product_code, dryrun=DEBUG)
+
+        # ToDo: catch errors when fetching Internetmarke (balance to low, etc.)
+
+        # Print label
+        ql = BrotherQL()
+        if DEBUG:
+            logging.info("DEBUG active, printing dummy label")
+            ql.print_label(BASE_PATH / "labels" / "label.png")
+        else:
+            ql.print_label(BASE_PATH / "labels" / f"{invoice['invoice_id']}.png")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,0 +1,120 @@
+{% extends "base.html" %} {% block content %}
+
+<style>
+
+/* Spinner animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* Hide spinner by default */
+.loading-spinner {
+    display: none;
+}
+
+/* Show spinner when button has htmx-request class */
+.htmx-request .loading-spinner {
+    display: inline-block;
+}
+
+/* Hide normal icon when loading */
+.htmx-request .normal-icon {
+    display: none;
+}
+
+/* Disable button during request */
+.htmx-request {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* Responsive table on mobile */
+@media screen and (max-width: 768px) {
+    .table-container {
+        overflow-x: auto;
+    }
+}
+</style>
+
+<div>
+  <span class="tag is-primary is-medium mb-3">Current balance: {{ '%0.2f'|format(balance/100|float) }}€</span>
+</div>
+
+<h1 class="title">Shipping Orders</h1>
+
+<div class="table-container">
+  <table class="table is-fullwidth is-striped is-hoverable">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Customer Name</th>
+        <th>Contact Name</th>
+        <th>Address</th>
+        <th>City</th>
+        <th>Postal Code</th>
+        <th>Country</th>
+        <th width="60px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td>{{ order['description'] }}</td>
+        <td>{{ order['quantity'] }}</td>
+        <td>{{ "%.2f"|format(order['unit_price']) }}</td>
+        <td>{{ order['name'] }}</td>
+        <td>{{ order['contact_name'] }}</td>
+        <td>{{ order['address'] }}</td>
+        <td>{{ order['city'] }}</td>
+        <td>{{ order['postal_code'] }}</td>
+        <td>
+          {{ order['country_code'] }}
+          <img
+            src="https://flagcdn.com/16x12/{{order['country_code'] | lower}}.png"
+            srcset="
+              https://flagcdn.com/32x24/{{order['country_code'] | lower}}.png 2x,
+              https://flagcdn.com/48x36/{{order['country_code'] | lower}}.png 3x
+            "
+            width="16"
+            height="12"
+          />
+        </td>
+        <td width="60px">
+          <button
+            class="button is-small is-info"
+            hx-post="/print/{{ order['invoice_id'] }}"
+            hx-swap
+          >
+            <span class="icon normal-icon">
+              <i class="fas fa-print"></i>
+            </span>
+            <span class="icon loading-spinner spinner">
+              <i class="fas fa-circle-notch"></i>
+            </span>
+            <span>Process</span>
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" class="has-text-centered">
+          <span class="icon-text">
+            <span class="icon">
+              <i class="fas fa-inbox"></i>
+            </span>
+            <span>No orders found</span>
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

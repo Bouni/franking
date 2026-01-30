@@ -1,7 +1,7 @@
 [project]
 name = "franking"
 version = "0.1.0"
-description = "A simple REST API for generating and printing Internetmarken"
+description = "A simple Interface for creating shipping labels using Deutsche Post Internetmarke for Invio"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
