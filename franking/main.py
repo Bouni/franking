@@ -1,7 +1,7 @@
+import logging
 import os
 import sqlite3
 from pathlib import Path
-import logging
 
 import pycountry
 from dotenv import load_dotenv
@@ -15,7 +15,10 @@ from franking.printer import BrotherQL
 
 load_dotenv()
 
-DEBUG = os.getenv("DEBUG", default=False)
+DEBUG = os.getenv("DEBUG", default="False").lower() in ("true", "1", "t")
+
+print(f"DEBUG = {DEBUG}")
+
 DB_PATH = os.getenv("DB_PATH", default="/opt/docker/invio/data/invio.db")
 
 BASE_PATH = Path(__file__).resolve().parent.parent
@@ -28,9 +31,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 def get_db():
-    conn = sqlite3.connect(
-        f"file:{DB_PATH}?mode=ro&immutable=1", uri=True
-    )
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro&immutable=1", uri=True)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -99,11 +100,9 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
         invoice = dict(invoice)
 
         # try converting 2-letter country code into 3-letter country code
-        try:
-            invoice["country_code"] = pycountry.countries.get(
-                alpha_2=invoice["country_code"].upper()
-            ).alpha_3
-        except:
+        if code := pycountry.countries.get(alpha_2=invoice["country_code"].upper()):
+            invoice["country_code"] = code.alpha_3
+        else:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
         # create address from data
@@ -118,19 +117,24 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
         # Figure out the right product code
         product_code = 21 if invoice["country_code"] == "DEU" else 10051
 
-        # get Internetmarke
-        im = Internetmarke()
-        if DEBUG:
-            logging.info("DEBUG active, Internetmarke dryrun")
-        im.order(invoice["invoice_id"], address, product_code, dryrun=DEBUG)
+        if (Path("labels") / f"{invoice['invoice_id']}.png").is_file():
+            logging.info(
+                f"Internetmarke for order '{invoice['invoice_id']}' already exists, continue with printing"
+            )
+        else:
+            # get Internetmarke
+            im = Internetmarke()
+            if DEBUG:
+                logging.info("DEBUG active, Internetmarke dryrun")
+            im.order(invoice["invoice_id"], address, product_code, dryrun=DEBUG)
 
         # ToDo: catch errors when fetching Internetmarke (balance to low, etc.)
 
         # Print label
         ql = BrotherQL()
         if DEBUG:
-            logging.info("DEBUG active, printing dummy label")
-            ql.print_label(BASE_PATH / "labels" / "label.png")
+            logging.info("DEBUG active, printing label is skipped")
+            # ql.print_label(BASE_PATH / "labels" / "label.png")
         else:
             ql.print_label(BASE_PATH / "labels" / f"{invoice['invoice_id']}.png")
 

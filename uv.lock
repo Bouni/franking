@@ -44,8 +44,8 @@ wheels = [
 
 [[package]]
 name = "brother-ql"
-version = "0.9.4"
-source = { registry = "https://pypi.org/simple" }
+version = "0.9.dev0"
+source = { git = "https://github.com/pklaus/brother_ql.git#0dee94b5fc3721159bae556b8bd2d975f92b7b8b" }
 dependencies = [
     { name = "attrs" },
     { name = "click" },
@@ -53,10 +53,6 @@ dependencies = [
     { name = "packbits" },
     { name = "pillow" },
     { name = "pyusb" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/e0/a5b4bade77838706b3ddfb31b037e99f6dc42feeadb62a4cd32120600903/brother_ql-0.9.4.tar.gz", hash = "sha256:1f5c57a039f012c9c204397f470001f76ebb7483421ebde985d0cb3c614e8660", size = 34986, upload-time = "2019-01-13T00:30:16.817Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/ad/939d717cbc97a4b73c221f953aceeec72cce2065835d2c001bfb6afa4511/brother_ql-0.9.4-py2.py3-none-any.whl", hash = "sha256:1a7a3faa56924c4e7670da82016486fc310af339acb2ffb98bd863a2667ab2c2", size = 39164, upload-time = "2019-01-13T00:30:14.599Z" },
 ]
 
 [[package]]
@@ -316,7 +312,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "brother-ql", specifier = ">=0.9.4" },
+    { name = "brother-ql", git = "https://github.com/pklaus/brother_ql.git" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0" },
     { name = "inema", specifier = ">=1.0.4" },
     { name = "pycountry", specifier = ">=24.6.1" },

@@ -1,3 +1,4 @@
+import logging
 import os
 import zipfile
 
@@ -89,11 +90,15 @@ class Internetmarke:
         )
         t = ir.calc_total(p)
         body = ir.mk_png_req(oid, p, t)
-        fn = f"{invoice}.zip"
+        fn = f"labels/{invoice}.zip"
         if not dryrun:
+            logging.info("Checkout Internetmarke")
             d = self.session.checkout_png(body, fn)
+            logging.info("Extract Internetmarke")
             self._extract_zip(invoice)
         else:
+            logging.info("Dryrun, skip checkout Internetmarke")
             d = None
+            logging.info("Dryrun, extract dummy Internetmarke")
             self._extract_zip("label")
         return {"oid": oid, "p": p, "t": t, "fn": fn, "d": d}
