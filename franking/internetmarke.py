@@ -63,10 +63,10 @@ class Internetmarke:
     def user_profile(self):
         return self.session.profile()
 
-    def _extract_zip(self, filename: str):
-        with zipfile.ZipFile(f"labels/{filename}.zip", "r") as zip_ref:
-            zip_ref.extract("0.png", "labels")
-            os.rename("labels/0.png", f"labels/{filename}.png")
+    def _extract_zip(self, path:Path, filename: str):
+        with zipfile.ZipFile(path / f"{filename}.zip", "r") as zip_ref:
+            zip_ref.extract("0.png", path)
+            os.rename(path / "0.png", path / f"{filename}.png")
 
     def order(
         self, path: Path, invoice: str, receiver: Address, product: int, dryrun: bool = False
@@ -96,7 +96,7 @@ class Internetmarke:
             logging.info("Checkout Internetmarke")
             d = self.session.checkout_png(body, fn)
             logging.info("Extract Internetmarke")
-            self._extract_zip(str(path / invoice))
+            self._extract_zip(path, invoice))
         else:
             logging.info("Dryrun, skip checkout Internetmarke")
             d = None
