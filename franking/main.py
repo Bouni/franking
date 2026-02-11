@@ -134,16 +134,18 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
             # im.order(Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG)
 
         # ToDo: catch errors when fetching Internetmarke (balance to low, etc.)
+            
 
         # Print label
         ql = BrotherQL()
+        lp = Path(LABEL_PATH) / f"{invoice['invoice_id']}.png"
         if DEBUG:
             logging.info("DEBUG active, printing label is skipped")
             # ql.print_label(BASE_PATH / "labels" / "label.png")
         else:
-            if not (Path(LABEL_PATH) / f"{invoice['invoice_id']}.png").is_file():
-                logging.error("No label file found!")
+            if not lp.is_file():
+                logging.error(f"No label {lp} found!")
             else :
-                ql.print_label(Path(LABEL_PATH) / f"{invoice['invoice_id']}.png")
+                ql.print_label(lp)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
