@@ -96,10 +96,10 @@ class Internetmarke:
             logging.info("Checkout Internetmarke")
             d = self.session.checkout_png(body, fn)
             logging.info("Extract Internetmarke")
-            self._extract_zip(path, invoice))
+            self._extract_zip(path, invoice)
         else:
             logging.info("Dryrun, skip checkout Internetmarke")
             d = None
             logging.info("Dryrun, extract dummy Internetmarke")
-            self._extract_zip("label")
+            self._extract_zip(path, "label")
         return {"oid": oid, "p": p, "t": t, "fn": fn, "d": d}
