@@ -20,6 +20,7 @@ DEBUG = os.getenv("DEBUG", default="False").lower() in ("true", "1", "t")
 print(f"DEBUG = {DEBUG}")
 
 DB_PATH = os.getenv("DB_PATH", default="/opt/docker/invio/data/invio.db")
+LABEL_PATH = os.getenv("LABEL_PATH", default="/opt/docker/invio/labels")
 
 BASE_PATH = Path(__file__).resolve().parent.parent
 
@@ -117,7 +118,7 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
         # Figure out the right product code
         product_code = 21 if invoice["country_code"] == "DEU" else 10051
 
-        if (Path("labels") / f"{invoice['invoice_id']}.png").is_file():
+        if (Path(LABEL_PATH) / f"{invoice['invoice_id']}.png").is_file():
             logging.info(
                 f"Internetmarke for order '{invoice['invoice_id']}' already exists, continue with printing"
             )
@@ -136,6 +137,6 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
             logging.info("DEBUG active, printing label is skipped")
             # ql.print_label(BASE_PATH / "labels" / "label.png")
         else:
-            ql.print_label(BASE_PATH / "labels" / f"{invoice['invoice_id']}.png")
+            ql.print_label(Path(LABEL_PATH) / f"{invoice['invoice_id']}.png")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
