@@ -64,6 +64,10 @@ class Internetmarke:
         return self.session.profile()
 
     def _extract_zip(self, path:Path, filename: str):
+        fp =path / f"{filename}.zip"
+        if not fp.is_file():
+            logging.error(f"Zipfile {fp} not found!")
+            return
         with zipfile.ZipFile(path / f"{filename}.zip", "r") as zip_ref:
             zip_ref.extract("0.png", path)
             os.rename(path / "0.png", path / f"{filename}.png")
