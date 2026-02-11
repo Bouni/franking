@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import os
 import zipfile
 
@@ -68,7 +69,7 @@ class Internetmarke:
             os.rename("labels/0.png", f"labels/{filename}.png")
 
     def order(
-        self, invoice: str, receiver: Address, product: int, dryrun: bool = False
+        self, path: Path, invoice: str, receiver: Address, product: int, dryrun: bool = False
     ):
         oid = self.session.create_order()
         p = ir.mk_png_pos(
@@ -90,12 +91,12 @@ class Internetmarke:
         )
         t = ir.calc_total(p)
         body = ir.mk_png_req(oid, p, t)
-        fn = f"labels/{invoice}.zip"
+        fn = str(path / f"{invoice}.zip")
         if not dryrun:
             logging.info("Checkout Internetmarke")
             d = self.session.checkout_png(body, fn)
             logging.info("Extract Internetmarke")
-            self._extract_zip(invoice)
+            self._extract_zip(str(path / invoice))
         else:
             logging.info("Dryrun, skip checkout Internetmarke")
             d = None

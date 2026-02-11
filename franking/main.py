@@ -118,6 +118,10 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
         # Figure out the right product code
         product_code = 21 if invoice["country_code"] == "DEU" else 10051
 
+        if not Path(LABEL_PATH).is_dir():
+            logging.error(f"Label path {LABEL_PATH} is not a directory")
+            return
+
         if (Path(LABEL_PATH) / f"{invoice['invoice_id']}.png").is_file():
             logging.info(
                 f"Internetmarke for order '{invoice['invoice_id']}' already exists, continue with printing"
@@ -127,7 +131,7 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
             im = Internetmarke()
             if DEBUG:
                 logging.info("DEBUG active, Internetmarke dryrun")
-            im.order(invoice["invoice_id"], address, product_code, dryrun=DEBUG)
+            im.order(Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG)
 
         # ToDo: catch errors when fetching Internetmarke (balance to low, etc.)
 
