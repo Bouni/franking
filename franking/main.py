@@ -131,7 +131,7 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
             im = Internetmarke()
             if DEBUG:
                 logging.info("DEBUG active, Internetmarke dryrun")
-            # im.order(Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG)
+            im.order(Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG)
 
         # ToDo: catch errors when fetching Internetmarke (balance to low, etc.)
             
