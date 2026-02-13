@@ -10,4 +10,5 @@ dependencies = [
     "inema>=1.0.4",
     "pycountry>=24.6.1",
     "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.22",
 ]
