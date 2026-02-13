@@ -1,0 +1,35 @@
+          <div class="buttons" id="buttons-{{ order['invoice_id'] }}">
+            <div class="select is-small">
+              <select 
+                name="product_code"
+              >
+              <option value="21" {% if order['country_code'] == 'DE' %}selected{% endif %}>Grossbrief national</option>
+              <option value="10051" {% if order['country_code'] != 'DE' %}selected{% endif %}>Grossbrief international</option>
+              </select>
+            </div>
+            <button
+              class="button is-small is-info"
+              hx-post="/purchase/{{ order['invoice_id'] }}"
+              hx-include="previous select"
+              hx-target="#buttons-{{ order['invoice_id'] }}"
+              hx-swap="outerHTML"
+              {% if order['purchased'] %}disabled{% endif %}
+            >
+              <span class="icon">
+                <i class="mdi mdi-postage-stamp mdi-18px"></i>
+              </span>
+              <span>Internetmarke</span>
+            </button>
+            <button
+              class="button is-small is-info"
+              hx-post="/print/{{ order['invoice_id'] }}"
+              hx-swap="none"
+              {% if not order['purchased'] %}disabled{% endif %}
+            >
+              <span class="icon normal-icon">
+                <i class="fas fa-print"></i>
+              </span>
+              <span>Print</span>
+            </button>
+          </div>
+

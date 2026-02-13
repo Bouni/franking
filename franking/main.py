@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pycountry
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi import Depends, FastAPI, Form, Request, Response, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -65,7 +65,9 @@ def index(
         WHERE ii.description LIKE '%Versand%'
         ORDER BY i.created_at DESC
     """)
-    orders = cursor.fetchall()
+    orders = [dict(order) for order in cursor.fetchall()]
+    for order in orders:
+        order["purchased"] = im.is_purchased(order["invoice_id"])
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -73,9 +75,15 @@ def index(
     )
 
 
-@app.post("/print/{invoice_id}")
-def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
+@app.post("/purchase/{invoice_id}")
+def purchase_internetmarke(
+    request: Request,
+    invoice_id: str,
+    product_code: int = Form(...),
+    db: sqlite3.Connection = Depends(get_db),
+):
     # fetch invoice data from db
+    im = Internetmarke()
     cursor = db.cursor()
     cursor.execute(f"""
         SELECT 
@@ -104,7 +112,10 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
         if code := pycountry.countries.get(alpha_2=invoice["country_code"].upper()):
             invoice["country_code"] = code.alpha_3
         else:
-            return Response(status_code=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": f"Invalid country code {invoice['country_code']}"},
+            )
 
         # create address from data
         address = Address(
@@ -115,37 +126,55 @@ def print_label(invoice_id: str, db: sqlite3.Connection = Depends(get_db)):
             country=invoice["country_code"],
         )
 
-        # Figure out the right product code
-        product_code = 21 if invoice["country_code"] == "DEU" else 10051
-
         if not Path(LABEL_PATH).is_dir():
             logging.error(f"Label path {LABEL_PATH} is not a directory")
-            return
+            return Response(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": f"Label path ({LABEL_PATH}) does not exist! "},
+            )
 
-        if (Path(LABEL_PATH) / f"{invoice['invoice_id']}.png").is_file():
-            logging.info(
-                f"Internetmarke for order '{invoice['invoice_id']}' already exists, continue with printing"
+        im = Internetmarke()
+        if DEBUG:
+            logging.info("DEBUG active, Internetmarke dryrun")
+            return Response(
+                status_code=status.HTTP_204_NO_CONTENT,
+                content={"detail": "Debug mode active, no Internetmarke purchased"},
+            )
+        im.order(
+            Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG
+        )
+
+    invoice["purchased"] = im.is_purchased(invoice["invoice_id"])
+
+    return templates.TemplateResponse(
+        "partials/buttons.html", {"request": request, "order": invoice}
+    )
+
+
+@app.post("/print/{invoice_id}")
+def print_label(invoice_id: str):
+    ql = BrotherQL()
+    lp = Path(LABEL_PATH) / f"{invoice_id}.png"
+    if not lp.is_file():
+        return Response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"detail": f"Label file ({lp}) does not exist! "},
+        )
+    if DEBUG:
+        logging.info("DEBUG active, printing label is skipped")
+        return Response(
+            status_code=status.HTTP_204_NO_CONTENT,
+            content={"detail": "Debug mode active, no label printed"},
+        )
+    else:
+        result = ql.print_label(lp)
+        if result:
+            return Response(
+                status_code=status.HTTP_204_NO_CONTENT,
+                content={"detail": "Label printed"},
             )
         else:
-            # get Internetmarke
-            im = Internetmarke()
-            if DEBUG:
-                logging.info("DEBUG active, Internetmarke dryrun")
-            im.order(Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG)
-
-        # ToDo: catch errors when fetching Internetmarke (balance to low, etc.)
-            
-
-        # Print label
-        ql = BrotherQL()
-        lp = Path(LABEL_PATH) / f"{invoice['invoice_id']}.png"
-        if DEBUG:
-            logging.info("DEBUG active, printing label is skipped")
-            # ql.print_label(BASE_PATH / "labels" / "label.png")
-        else:
-            if not lp.is_file():
-                logging.error(f"No label {lp} found!")
-            else :
-                ql.print_label(lp)
-
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+            return Response(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "Label print failed"},
+            )

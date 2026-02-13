@@ -7,38 +7,38 @@
    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
     
-    <!-- Font Awesome for icons (optional) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
     
     <script src="https://unpkg.com/htmx.org@2.0.0" integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw" crossorigin="anonymous"></script>
     
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-      <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
-        <div class="container">
-            <div class="navbar-brand">
-                <a class="navbar-item" href="/">
-                    <strong>Invio Orders</strong>
-                </a>
-            </div>
-
-            <div class="navbar-menu">
-                <div class="navbar-start">
-                    <a class="navbar-item" href="/">
-                        Home
-                    </a>
-                    <a class="navbar-item" href="/orders">
-                        Orders
-                    </a>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!--   <nav class="navbar is-dark" role="navigation" aria-label="main navigation"> -->
+    <!--     <div class="container-fluid"> -->
+    <!--         <div class="navbar-brand"> -->
+    <!--             <a class="navbar-item" href="/"> -->
+    <!--                 <strong>Invio Orders</strong> -->
+    <!--             </a> -->
+    <!--         </div> -->
+    <!---->
+    <!--         <div class="navbar-menu"> -->
+    <!--             <div class="navbar-start"> -->
+    <!--                 <a class="navbar-item" href="/"> -->
+    <!--                     Home -->
+    <!--                 </a> -->
+    <!--                 <a class="navbar-item" href="/orders"> -->
+    <!--                     Orders -->
+    <!--                 </a> -->
+    <!--             </div> -->
+    <!--         </div> -->
+    <!--     </div> -->
+    <!-- </nav> -->
 
     <!-- Main content -->
     <section class="section">
-        <div class="container">
+        <div class="container-fluid">
             {% block content %}{% endblock %}
         </div>
     </section>

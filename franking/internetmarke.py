@@ -22,6 +22,8 @@ SENDER_POSTCODE = os.getenv("SENDER_POSTCODE")
 SENDER_CITY = os.getenv("SENDER_CITY")
 SENDER_COUNTRY = os.getenv("SENDER_COUNTRY")
 
+LABEL_PATH = os.getenv("LABEL_PATH", default="/opt/docker/invio/labels")
+
 # Notes:
 # Format 216 = Brother DK-22225 Endlos-Etikett 38mm
 # Product 21 = Großbrief
@@ -56,6 +58,10 @@ class Internetmarke:
 
     def get_products(self):
         return products.items()
+
+    def is_purchased(self, invoice: str) -> bool:
+        label_file = Path(LABEL_PATH) / f"{invoice}.png"
+        return label_file.is_file()
 
     def check_health(self):
         return ir.check_health()

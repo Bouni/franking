@@ -38,12 +38,14 @@ class BrotherQL:
             compress=compress,
         )
 
-        send(
+        status = send(
             instructions=instructions,
             printer_identifier=f"tcp://{self.ip}:{self.port}",
             backend_identifier="network",
             blocking=True,
         )
 
-        print(f"Successfully printed {path}")
-        return True
+        if status['did_print'] and status['ready_for_next_job']:
+            print(f"Successfully printed {path}")
+            return True
+        return False
