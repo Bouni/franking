@@ -74,6 +74,12 @@ def index(
         context={"orders": orders, "balance": im.get_balance()},
     )
 
+@app.get("/internetmarke/balance")
+def internetmarke_balance(request: Request):
+    im = Internetmarke()
+    return templates.TemplateResponse(
+        "partials/balance.html", {"request": request, "balance": im.get_balance()}
+    )
 
 @app.post("/purchase/{invoice_id}")
 def purchase_internetmarke(

@@ -1,0 +1,10 @@
+<div
+  id="status-display"
+  hx-get="/internetmarke/balance"
+  hx-trigger="update-balance from:body"
+  hx-swap="outerHTML"
+>
+  <span class="tag is-primary is-medium mb-3"
+    >Current balance: {{ '%0.2f'|format(balance/100|float) }}€</span
+  >
+</div>
