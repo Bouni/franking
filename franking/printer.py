@@ -44,6 +44,7 @@ class BrotherQL:
             backend_identifier="network",
             blocking=True,
         )
+        print(status)
 
         if status['did_print'] and status['ready_for_next_job']:
             print(f"Successfully printed {path}")

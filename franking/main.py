@@ -162,20 +162,20 @@ def print_label(invoice_id: str):
     ql = BrotherQL()
     lp = Path(LABEL_PATH) / f"{invoice_id}.png"
     if not lp.is_file():
-        return Response(
+        return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"detail": f"Label file ({lp}) does not exist! "},
         )
     if DEBUG:
         logging.info("DEBUG active, printing label is skipped")
-        return Response(
+        return JSONResponse(
             status_code=status.HTTP_204_NO_CONTENT,
             content={"detail": "Debug mode active, no label printed"},
         )
     else:
         result = ql.print_label(lp)
         if result:
-            return Response(
+            return JSONResponse(
                 status_code=status.HTTP_204_NO_CONTENT,
                 content={"detail": "Label printed"},
             )
