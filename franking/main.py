@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pycountry
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form, Request, Response, status
+from fastapi import Depends, FastAPI, Form, Request, Response, status, JSONResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -74,7 +74,7 @@ def index(
         context={"orders": orders, "balance": im.get_balance()},
     )
 
-@app.get("/internetmarke/balance")
+@app.post("/internetmarke/balance")
 def internetmarke_balance(request: Request):
     im = Internetmarke()
     return templates.TemplateResponse(
@@ -180,7 +180,7 @@ def print_label(invoice_id: str):
                 content={"detail": "Label printed"},
             )
         else:
-            return Response(
+            return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={"detail": "Label print failed"},
             )
