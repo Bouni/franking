@@ -44,9 +44,8 @@ class BrotherQL:
             backend_identifier="network",
             blocking=True,
         )
-        print(status)
 
-        if status['did_print'] and status['ready_for_next_job']:
+        if status['outcome'] == "sent":
             print(f"Successfully printed {path}")
             return True
         return False
