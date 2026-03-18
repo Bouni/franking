@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pycountry
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form, Request, Response, status, JSONResponse
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, Form, Request, Response, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from franking.internetmarke import Internetmarke
