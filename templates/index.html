@@ -87,6 +87,16 @@
               </span>
               <span>Print</span>
             </button>
+            <button 
+              class="button is-small is-info"
+              hx-post="/send/{{ order['invoice_id'] }}" 
+              hx-swap="none"
+              class="btn-primary">
+              <span class="icon normal-icon">
+                <i class="fas fa-envelope"></i>
+              </span>
+              <span>Send</span> 
+          </button>
           </div>
         </td>
       </tr>
