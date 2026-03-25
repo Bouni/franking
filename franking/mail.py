@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from invio import Invio
+from franking.invio import Invio
 
 load_dotenv()
 
