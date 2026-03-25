@@ -1,20 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Franking{% endblock %}</title>
-   
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
-    
-    <script src="https://unpkg.com/htmx.org@2.0.0" integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw" crossorigin="anonymous"></script>
-    
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
+    />
+
+    <script
+      src="https://unpkg.com/htmx.org@2.0.0"
+      integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw"
+      crossorigin="anonymous"
+    ></script>
+
     {% block extra_head %}{% endblock %}
-</head>
-<body>
+  </head>
+  <body>
     <!--   <nav class="navbar is-dark" role="navigation" aria-label="main navigation"> -->
     <!--     <div class="container-fluid"> -->
     <!--         <div class="navbar-brand"> -->
@@ -38,11 +56,28 @@
 
     <!-- Main content -->
     <section class="section">
-        <div class="container-fluid">
-            {% block content %}{% endblock %}
-        </div>
+      <div class="container-fluid">{% block content %}{% endblock %}</div>
     </section>
 
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/toastify-js"
+    ></script>
+    <script>
+      document.body.addEventListener("showToast", function (evt) {
+        // evt.detail contains the JSON object we sent from FastAPI
+        const data = evt.detail;
+
+        // Example using Toastify.js
+        Toastify({
+          text: data.message,
+          duration: 3000,
+          gravity: "top",
+          position: "right",
+          backgroundColor: data.type === "success" ? "green" : "red",
+        }).showToast();
+      });
+    </script>
     {% block extra_scripts %}{% endblock %}
-</body>
+  </body>
 </html>

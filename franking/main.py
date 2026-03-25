@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sqlite3
@@ -74,12 +75,14 @@ def index(
         context={"orders": orders, "balance": im.get_balance()},
     )
 
+
 @app.post("/internetmarke/balance")
 def internetmarke_balance(request: Request):
     im = Internetmarke()
     return templates.TemplateResponse(
         "partials/balance.html", {"request": request, "balance": im.get_balance()}
     )
+
 
 @app.post("/purchase/{invoice_id}")
 def purchase_internetmarke(
@@ -184,3 +187,10 @@ def print_label(invoice_id: str):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={"detail": "Label print failed"},
             )
+
+
+@app.post("/send/{invoice_id}")
+def send_invoice_email(invoice_id: str, response: Response):
+    payload = json.dumps({"message": "Item updated successfully!", "type": "success"})
+    response.headers["HX-Trigger"] = payload
+    return "<div>Update Successful</div>"
