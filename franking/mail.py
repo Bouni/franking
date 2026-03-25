@@ -6,8 +6,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
+
+from invio import Invio
 
 load_dotenv()
 
@@ -26,39 +27,40 @@ INVIO_USER = os.getenv("INVIO_USER", "")
 INVIO_PASSWORD = os.getenv("INVIO_PASSWORD", "")
 
 
-def send_invoice(recipient: str, subject: str, body: str, invoice_number: str, invoice_data: bytes):
-    message = MIMEMultipart()
-    message["Subject"] = subject
-    message["From"] = EMAIL_SENDER
-    message["To"] = recipient
-    body_part = MIMEText(body)
-    message.attach(body_part)
-    
-    part = MIMEApplication(invoice_data, Name=f"{invoice_number}.pdf")
-    part['Content-Disposition'] = f'attachment; filename="{invoice_number}.pdf"'
-    message.attach(part)
+class Mail:
+    def __init__(self, subject: str, body: str):
+        self.subject = subject
+        self.body = body
 
+    def send_invoice(self, invoice_id: str):
+        invio = Invio()
+        invoice_data = invio.get_invoice_data(invoice_id)
+        invoice_pdf = invio.get_invoice_pdf(invoice_id)
 
-    with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
-        server.login(EMAIL_USER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_SENDER, recipient, message.as_string())
+        recipient = "bouni@owee.de"
 
+        message = MIMEMultipart()
+        message["Subject"] = self.subject
+        message["From"] = EMAIL_SENDER
+        message["To"] = recipient
+        body_part = MIMEText(self.body)
+        message.attach(body_part)
 
-def get_invoice_pdf(invoice_id: str):
-    r = requests.post(
-        f"{INVIO_URL}/auth/login",
-        json={"username": INVIO_USER, "password": INVIO_PASSWORD},
-    )
-    token = r.json()["token"]
-    r = requests.get(
-        f"{INVIO_URL}/invoices/{invoice_id}/pdf",
-        stream=True,
-        headers={"Authorization": f"Bearer {token}"},
-    ) 
-    r.raise_for_status()
-    return r.content
+        part = MIMEApplication(
+            invoice_pdf, Name=f"{invoice_data.get('invoiceNumber')}.pdf"
+        )
+        part["Content-Disposition"] = (
+            f'attachment; filename="{invoice_data.get("invoiceNumber")}.pdf"'
+        )
+        message.attach(part)
+
+        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_SENDER, recipient, message.as_string())
 
 
 if __name__ == "__main__":
-    pdf = get_invoice_pdf("88f29f86-037a-4afe-9b9e-5d3ac9bd7c4c")
-    send_invoice("bouni@owee.de", "Invoice BSH-Boards", "Attached you find the invoice for your BSH-Board order.", "INV-2026-03-024", pdf)
+    m = Mail("subject", "body")
+    m.send_invoice("88f29f86-037a-4afe-9b9e-5d3ac9bd7c4c")
+    # pdf = get_invoice_pdf("88f29f86-037a-4afe-9b9e-5d3ac9bd7c4c")
+    # send_invoice("bouni@owee.de", "Invoice BSH-Boards", "Attached you find the invoice for your BSH-Board order.", "INV-2026-03-024", pdf)

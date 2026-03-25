@@ -11,6 +11,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from franking.internetmarke import Internetmarke
+from franking.invio import Invio
+from franking.mail import Mail
 from franking.models import Address
 from franking.printer import BrotherQL
 
@@ -219,6 +221,23 @@ def print_label(invoice_id: str, response: Response):
 
 @app.post("/send/{invoice_id}")
 def send_invoice_email(invoice_id: str, response: Response):
+    invio = Invio()
+    invoice_data = invio.get_invoice_data(invoice_id)
+    m = Mail(
+        f"Invoice {invoice_data.get('invoiceNumber')}",
+        f"""Dear {invoice_data.get('name')},
+
+        Attached you find the invoice for your order.
+        It contains payment info for bank transfer as well as for PayPal.
+
+        As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
+
+        Thnak you very much for your Order!
+
+        Bouni
+             """,
+    )
+    m.send_invoice(invoice_id)
     payload = json.dumps(
         {"showToast": {"message": "Item updated successfully!", "type": "success"}}
     )
