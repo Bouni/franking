@@ -65,16 +65,23 @@
     ></script>
     <script>
       document.body.addEventListener("showToast", function (evt) {
-        // evt.detail contains the JSON object we sent from FastAPI
         const data = evt.detail;
 
-        // Example using Toastify.js
+        let bg = "red"
+        if(data.type === "success") {
+          bg = "green"
+        } else if (data.type === "debug") {
+          bg = "#5693c9" 
+        }
+
         Toastify({
           text: data.message,
           duration: 3000,
-          gravity: "top",
-          position: "right",
-          backgroundColor: data.type === "success" ? "green" : "red",
+          gravity: "bottom",
+          position: "center",
+          style: {
+            background: bg
+          }
         }).showToast();
       });
     </script>

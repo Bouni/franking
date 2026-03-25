@@ -7,7 +7,7 @@ from pathlib import Path
 import pycountry
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, Request, Response, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from franking.internetmarke import Internetmarke
@@ -161,32 +161,56 @@ def purchase_internetmarke(
 
 
 @app.post("/print/{invoice_id}")
-def print_label(invoice_id: str):
+def print_label(invoice_id: str, response: Response):
     ql = BrotherQL()
     lp = Path(LABEL_PATH) / f"{invoice_id}.png"
     if not lp.is_file():
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"detail": f"Label file ({lp}) does not exist! "},
+        payload = json.dumps(
+            {
+                "showToast": {
+                    "message": f"Label file ({lp}) does not exist!",
+                    "type": "failure",
+                }
+            }
         )
+        response.headers["HX-Trigger"] = payload
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
     if DEBUG:
         logging.info("DEBUG active, printing label is skipped")
-        return JSONResponse(
-            status_code=status.HTTP_204_NO_CONTENT,
-            content={"detail": "Debug mode active, no label printed"},
+        payload = json.dumps(
+            {
+                "showToast": {
+                    "message": "Debug mode active, no label printed",
+                    "type": "debug",
+                }
+            }
         )
+        response.headers["HX-Trigger"] = payload
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     else:
         result = ql.print_label(lp)
         if result:
-            return JSONResponse(
-                status_code=status.HTTP_204_NO_CONTENT,
-                content={"detail": "Label printed"},
+            payload = json.dumps(
+                {
+                    "showToast": {
+                        "message": "Label sucessfully printed!",
+                        "type": "success",
+                    }
+                }
             )
+            response.headers["HX-Trigger"] = payload
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
         else:
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": "Label print failed"},
+            payload = json.dumps(
+                {
+                    "showToast": {
+                        "message": "Label print failed!",
+                        "type": "failure",
+                    }
+                }
             )
+            response.headers["HX-Trigger"] = payload
+            return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @app.post("/send/{invoice_id}")
@@ -195,4 +219,4 @@ def send_invoice_email(invoice_id: str, response: Response):
         {"showToast": {"message": "Item updated successfully!", "type": "success"}}
     )
     response.headers["HX-Trigger"] = payload
-    return "<div>Update Successful</div>"
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
