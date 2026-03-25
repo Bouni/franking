@@ -174,7 +174,8 @@ def print_label(invoice_id: str, response: Response):
             }
         )
         response.headers["HX-Trigger"] = payload
-        return Response(status_code=status.HTTP_404_NOT_FOUND)
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return response
     if DEBUG:
         logging.info("DEBUG active, printing label is skipped")
         payload = json.dumps(
@@ -186,7 +187,8 @@ def print_label(invoice_id: str, response: Response):
             }
         )
         response.headers["HX-Trigger"] = payload
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        response.status_code = status.HTTP_204_NO_CONTENT
+        return response
     else:
         result = ql.print_label(lp)
         if result:
@@ -199,7 +201,8 @@ def print_label(invoice_id: str, response: Response):
                 }
             )
             response.headers["HX-Trigger"] = payload
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
+            response.status_code = status.HTTP_204_NO_CONTENT
+            return response
         else:
             payload = json.dumps(
                 {
@@ -210,7 +213,8 @@ def print_label(invoice_id: str, response: Response):
                 }
             )
             response.headers["HX-Trigger"] = payload
-            return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            return response
 
 
 @app.post("/send/{invoice_id}")
@@ -219,4 +223,5 @@ def send_invoice_email(invoice_id: str, response: Response):
         {"showToast": {"message": "Item updated successfully!", "type": "success"}}
     )
     response.headers["HX-Trigger"] = payload
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
