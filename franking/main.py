@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sqlite3
+import textwrap
 from pathlib import Path
 
 import pycountry
@@ -223,20 +224,19 @@ def print_label(invoice_id: str, response: Response):
 def send_invoice_email(invoice_id: str, response: Response):
     invio = Invio()
     invoice_data = invio.get_invoice_data(invoice_id)
-    m = Mail(
-        f"Invoice {invoice_data.get('invoiceNumber')}",
-        f"""Dear {invoice_data.get('name')},
+    subject = f"Invoice {invoice_data.get('invoiceNumber')}"
+    body = textwrap.dedent(f"""
+        Dear {invoice_data.get("customer", {}).get("name")},
 
         Attached you find the invoice for your order.
         It contains payment info for bank transfer as well as for PayPal.
 
         As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
 
-        Thnak you very much for your Order!
+        Thank you very much for your Order!
 
-        Bouni
-             """,
-    )
+        Bouni""").strip()
+    m = Mail(subject, body)
     m.send_invoice(invoice_id)
     payload = json.dumps(
         {"showToast": {"message": "Item updated successfully!", "type": "success"}}
