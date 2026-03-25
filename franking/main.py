@@ -191,6 +191,8 @@ def print_label(invoice_id: str):
 
 @app.post("/send/{invoice_id}")
 def send_invoice_email(invoice_id: str, response: Response):
-    payload = json.dumps({"message": "Item updated successfully!", "type": "success"})
+    payload = json.dumps(
+        {"showToast": {"message": "Item updated successfully!", "type": "success"}}
+    )
     response.headers["HX-Trigger"] = payload
     return "<div>Update Successful</div>"
