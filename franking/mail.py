@@ -40,6 +40,9 @@ class Mail:
         # recipient = "bouni@owee.de"
         recipient = invoice_data.get("customer", {}).get("email")
 
+        if not recipient:
+            raise Exception("No mail address found")
+
         message = MIMEMultipart()
         message["Subject"] = self.subject
         message["From"] = EMAIL_SENDER
@@ -58,6 +61,7 @@ class Mail:
         with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
             server.login(EMAIL_USER, EMAIL_PASSWORD)
             server.sendmail(EMAIL_SENDER, recipient, message.as_string())
+            logging.info(f"Invoice sent to {recipient}")
 
 
 if __name__ == "__main__":
