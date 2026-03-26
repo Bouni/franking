@@ -235,7 +235,10 @@ def send_invoice_email(invoice_id: str, response: Response):
 
         Thank you very much for your Order!
 
-        Bouni""").strip()
+        Bouni
+
+        P.S. Sorry to those of you who are non german speakers for the german invoice, my invoicing software does not yet allow localized invoices 😅
+        """).strip()
     m = Mail(subject, body)
     m.send_invoice(invoice_id)
     payload = json.dumps(
