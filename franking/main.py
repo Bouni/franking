@@ -88,7 +88,7 @@ def internetmarke_balance(request: Request):
     )
 
 
-@app.post("/material/reserved")
+@app.get("/material/reserved")
 def reserved_material(
     request: Request,
     db: sqlite3.Connection = Depends(get_db),
