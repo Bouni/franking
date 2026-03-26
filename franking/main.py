@@ -91,6 +91,7 @@ def internetmarke_balance(request: Request):
 def purchase_internetmarke(
     request: Request,
     invoice_id: str,
+    response: Response,
     product_code: int = Form(...),
     db: sqlite3.Connection = Depends(get_db),
 ):
@@ -124,10 +125,17 @@ def purchase_internetmarke(
         if code := pycountry.countries.get(alpha_2=invoice["country_code"].upper()):
             invoice["country_code"] = code.alpha_3
         else:
-            return Response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": f"Invalid country code {invoice['country_code']}"},
+            payload = json.dumps(
+                {
+                    "showToast": {
+                        "message": f"Invalid country code {invoice['country_code']}",
+                        "type": "debug",
+                    }
+                }
             )
+            response.headers["HX-Trigger"] = payload
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return response
 
         # create address from data
         address = Address(
@@ -140,18 +148,32 @@ def purchase_internetmarke(
 
         if not Path(LABEL_PATH).is_dir():
             logging.error(f"Label path {LABEL_PATH} is not a directory")
-            return Response(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": f"Label path ({LABEL_PATH}) does not exist! "},
+            payload = json.dumps(
+                {
+                    "showToast": {
+                        "message": f"Label path ({LABEL_PATH}) does not exist! ",
+                        "type": "debug",
+                    }
+                }
             )
+            response.headers["HX-Trigger"] = payload
+            response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            return response
 
         im = Internetmarke()
         if DEBUG:
             logging.info("DEBUG active, Internetmarke dryrun")
-            return Response(
-                status_code=status.HTTP_204_NO_CONTENT,
-                content={"detail": "Debug mode active, no Internetmarke purchased"},
+            payload = json.dumps(
+                {
+                    "showToast": {
+                        "message": "Debug mode active, no Internetmarke purchased",
+                        "type": "debug",
+                    }
+                }
             )
+            response.headers["HX-Trigger"] = payload
+            response.status_code = status.HTTP_204_NO_CONTENT
+            return response
         im.order(
             Path(LABEL_PATH), invoice["invoice_id"], address, product_code, dryrun=DEBUG
         )
@@ -224,7 +246,7 @@ def print_label(invoice_id: str, response: Response):
 def send_invoice_email(invoice_id: str, response: Response):
     invio = Invio()
     invoice_data = invio.get_invoice_data(invoice_id)
-    subject = f"Invoice {invoice_data.get('invoiceNumber')}"
+    subject = f"Invoice {invoice_data.get('invoiceNumber')} (BSH-Board)"
     body = textwrap.dedent(f"""
         Dear {invoice_data.get("customer", {}).get("name")},
 
@@ -242,7 +264,7 @@ def send_invoice_email(invoice_id: str, response: Response):
     m = Mail(subject, body)
     m.send_invoice(invoice_id)
     payload = json.dumps(
-        {"showToast": {"message": "Item updated successfully!", "type": "success"}}
+        {"showToast": {"message": "Invoice successfully sent!", "type": "success"}}
     )
     response.headers["HX-Trigger"] = payload
     response.status_code = status.HTTP_204_NO_CONTENT
