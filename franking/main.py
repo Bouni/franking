@@ -88,6 +88,29 @@ def internetmarke_balance(request: Request):
     )
 
 
+@app.post("/material/reserved")
+def reserved_material(
+    request: Request,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT 
+            ii.description AS Article,
+            SUM(ii.quantity) || ' pcs' AS Total
+        FROM invoice_items ii
+        INNER JOIN invoices i ON ii.invoice_id = i.id
+        WHERE i.status = 'sent'
+        GROUP BY ii.description
+        ORDER BY SUM(ii.quantity) DESC;
+    """)
+    material = cursor.fetchall()
+    print(material)
+    # return templates.TemplateResponse(
+    #     "partials/material.html", {"request": request, "material": material}
+    # )
+
+
 @app.post("/purchase/{invoice_id}")
 def purchase_internetmarke(
     request: Request,
