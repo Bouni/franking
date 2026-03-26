@@ -54,7 +54,7 @@ def index(
     cursor.execute("""
         SELECT 
             ii.invoice_id,
-            ii.invoice_number,
+            i.invoice_number,
             ii.description,
             ii.quantity,
             ii.unit_price,
