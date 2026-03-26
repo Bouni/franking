@@ -105,10 +105,9 @@ def reserved_material(
         ORDER BY SUM(ii.quantity) DESC;
     """)
     material = [dict(mat) for mat in cursor.fetchall()]
-    print(material)
-    # return templates.TemplateResponse(
-    #     "partials/material.html", {"request": request, "material": material}
-    # )
+    return templates.TemplateResponse(
+        "partials/material.html", {"request": request, "material": material}
+    )
 
 
 @app.post("/purchase/{invoice_id}")

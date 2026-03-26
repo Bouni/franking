@@ -1,0 +1,9 @@
+<div id="material"
+  hx-get="/material/reserved"
+  hx-trigger="load from:body"
+  hx-swap="outerHTML"
+  >
+  {% for m in material %}
+  <span class="tag is-info">{{ m.Article}}: {{ m.Total }}</span>
+  {% endfor %}
+</div>
