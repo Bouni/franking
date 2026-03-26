@@ -67,7 +67,7 @@ def index(
         FROM invoice_items ii
         INNER JOIN invoices i ON ii.invoice_id = i.id
         INNER JOIN customers c ON i.customer_id = c.id
-        WHERE ii.description LIKE '%Versand%'
+        WHERE ii.description LIKE '%Versand%' AND i.status = 'sent'
         ORDER BY i.created_at DESC
     """)
     orders = [dict(order) for order in cursor.fetchall()]
