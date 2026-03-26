@@ -1,6 +1,8 @@
+import imaplib
 import logging
 import os
 import smtplib
+import time
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -62,6 +64,15 @@ class Mail:
             server.login(EMAIL_USER, EMAIL_PASSWORD)
             server.sendmail(EMAIL_SENDER, recipient, message.as_string())
             logging.info(f"Invoice sent to {recipient}")
+
+        with imaplib.IMAP4_SSL(EMAIL_SMTP_SERVER) as imap:
+            imap.login(EMAIL_USER, EMAIL_PASSWORD)
+            imap.append(
+                "Sent",
+                "",
+                imaplib.Time2Internaldate(time.time()),
+                message.as_bytes(),
+            )
 
 
 if __name__ == "__main__":
