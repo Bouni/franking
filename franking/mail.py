@@ -37,7 +37,8 @@ class Mail:
         invoice_data = invio.get_invoice_data(invoice_id)
         invoice_pdf = invio.get_invoice_pdf(invoice_id)
 
-        recipient = "bouni@owee.de"
+        # recipient = "bouni@owee.de"
+        recipient = invoice_data.get("customer", {}).get("email")
 
         message = MIMEMultipart()
         message["Subject"] = self.subject
