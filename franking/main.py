@@ -248,7 +248,16 @@ def send_invoice_email(invoice_id: str, response: Response):
     invoice_data = invio.get_invoice_data(invoice_id)
     subject = f"Invoice {invoice_data.get('invoiceNumber')} (BSH-Board)"
     body = textwrap.dedent(f"""
-        Dear {invoice_data.get("customer", {}).get("name")},
+        Hi {invoice_data.get("customer", {}).get("name")},
+
+        Im Anhang findest du die Rechnung für deine Bestellung.
+        Diese beinhaltet Zahlungsinformationen für Banküberweisungen und PayPal.
+
+        Sobald ich die Zahlung erhalten habe versende ich in aller Regel am nächsten Werktag.
+
+        Vielen Dank für die Bestellung!
+
+        -------------------------------------------------------------------------------------
 
         Attached you find the invoice for your order.
         It contains payment info for bank transfer as well as for PayPal.
@@ -256,6 +265,9 @@ def send_invoice_email(invoice_id: str, response: Response):
         As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
 
         Thank you very much for your Order!
+
+        -------------------------------------------------------------------------------------
+
 
         Bouni
 
