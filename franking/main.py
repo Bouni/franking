@@ -104,7 +104,7 @@ def reserved_material(
         GROUP BY ii.description
         ORDER BY SUM(ii.quantity) DESC;
     """)
-    material = cursor.fetchall()
+    material = [dict(mat) for mat in cursor.fetchall()]
     print(material)
     # return templates.TemplateResponse(
     #     "partials/material.html", {"request": request, "material": material}
