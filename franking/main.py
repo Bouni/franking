@@ -100,7 +100,7 @@ def reserved_material(
             SUM(ii.quantity) || ' pcs' AS Total
         FROM invoice_items ii
         INNER JOIN invoices i ON ii.invoice_id = i.id
-        WHERE i.status = 'sent'
+        WHERE i.status = 'sent' AND ii.description NOT LIKE '%Versand%'
         GROUP BY ii.description
         ORDER BY SUM(ii.quantity) DESC;
     """)
