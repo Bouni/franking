@@ -17,6 +17,7 @@
   <table class="table is-fullwidth is-striped is-hoverable">
     <thead>
       <tr>
+        <th>Invoice number</th>
         <th>Description</th>
         <th>Quantity</th>
         <th>Unit Price</th>
@@ -32,6 +33,7 @@
     <tbody>
       {% for order in orders %}
       <tr>
+        <td>{{ order['invoice_number'] }}</td>
         <td>{{ order['description'] }}</td>
         <td>{{ order['quantity'] }}</td>
         <td>{{ "%.2f"|format(order['unit_price']) }}</td>
