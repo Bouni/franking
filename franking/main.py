@@ -278,6 +278,8 @@ def send_invoice_email(invoice_id: str, response: Response):
 
         Sobald ich die Zahlung erhalten habe versende ich in aller Regel am nächsten Werktag.
 
+        Wichtiger Hinweis: Ich bin bis zum 5. April im Urlaub, der Versand startet erst nach diesem Datum!
+
         Vielen Dank für die Bestellung!
 
         -------------------------------------------------------------------------------------
@@ -286,6 +288,8 @@ def send_invoice_email(invoice_id: str, response: Response):
         It contains payment info for bank transfer as well as for PayPal.
 
         As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
+        
+        Important note: I'm on vaccation until April 5th, shipping will start after that date!
 
         Thank you very much for your Order!
 
