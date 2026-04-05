@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from brother_ql.backends.helpers import send
-from brother_ql.brother_ql_create import convert
+from brother_ql.conversion import convert
 from brother_ql.raster import BrotherQLRaster
 from PIL import Image
 
@@ -11,41 +11,34 @@ class BrotherQL:
         self,
         model: str = "QL-710W",
         ip: str = "192.168.88.13",
-        port: str = "9100",
         label_size: str = "38",
     ):
         self.model = model
         self.ip = ip
-        self.port = port
         self.label_size = label_size
 
     def print_label(
         self,
         path: Path,
-        threshold: int = 70,
-        dither: bool = False,
-        compress: bool = False,
     ):
-        img = Image.open(path)
+        image = Image.open(path).convert("RGB")
+
         qlr = BrotherQLRaster(self.model)
+        qlr.exception_on_warning = True
+
         instructions = convert(
-            qlr=qlr,
-            images=[img],
-            label=self.label_size,
-            rotate="90",
-            threshold=threshold,
-            dither=dither,
-            compress=compress,
+            qlr=qlr, images=[image], label=self.label_size, rotate="90"
         )
 
         status = send(
             instructions=instructions,
-            printer_identifier=f"tcp://{self.ip}:{self.port}",
+            printer_identifier=f"tcp://{self.ip}",
             backend_identifier="network",
-            blocking=True,
         )
 
-        if status['outcome'] == "sent":
+        print(status)
+
+        if status["outcome"] == "sent":
             print(f"Successfully printed {path}")
             return True
         return False

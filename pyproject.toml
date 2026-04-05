@@ -5,10 +5,14 @@ description = "A simple Interface for creating shipping labels using Deutsche Po
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "brother-ql @ git+https://github.com/pklaus/brother_ql.git",
+    "brother-ql",
     "fastapi[standard]>=0.128.0",
     "inema>=1.0.4",
     "pycountry>=24.6.1",
+    "pyipp>=0.17.2",
     "python-dotenv>=1.2.1",
     "python-multipart>=0.0.22",
 ]
+
+[tool.uv.sources]
+brother-ql = { git = "https://github.com/pklaus/brother_ql.git", rev = "0dee94b5fc3721159bae556b8bd2d975f92b7b8b" }
