@@ -1,123 +1,202 @@
-{% extends "base.html" %} {% block content %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vue 3 + Vuetify App</title>
 
-<style>
-  /* Responsive table on mobile */
-  @media screen and (max-width: 768px) {
-    .table-container {
-      overflow-x: auto;
-    }
-  }
-</style>
+    <!-- Vuetify CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/vuetify@3/dist/vuetify.min.css"
+      rel="stylesheet"
+    />
+    <!-- Material Design Icons -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/@mdi/font@7/css/materialdesignicons.min.css"
+      rel="stylesheet"
+    />
+  </head>
 
-{% include 'partials/balance.html' %}
+  <body>
+    <div id="app">
+      <v-app>
+        <!-- App Bar -->
+        <v-app-bar color="grey-darken-4" elevation="2">
+          <v-app-bar-title>Franking</v-app-bar-title>
+        </v-app-bar>
 
-{% include 'partials/material.html' %}
+        <!-- Main Content -->
+        <v-main>
+          <v-container fluid class="py-1">
+            <v-row justify="center">
+              <v-col cols="12" md="8">
+                <!-- Feature Grid -->
+                <v-row>
+                  <v-col class="my-3">
+                    <v-card
+                      rounded="lg"
+                      variant="tonal"
+                      color="yellow"
+                      height="100%"
+                    >
+                      <v-card-item>
+                        <template #prepend>
+                          <v-icon icon="money" size="28"></v-icon>
+                        </template>
+                        <v-card-title>Portokasse</v-card-title>
+                      </v-card-item>
+                      <v-card-text>{{ internetmarke.balance / 100 }}</v-card-text>
+                    </v-card>
+                  </v-col>
+                  <v-col class="my-3">
+                    <v-card
+                      rounded="lg"
+                      variant="tonal"
+                      color="blue"
+                      height="100%"
+                    >
+                      <v-card-item>
+                        <template #prepend>
+                          <v-icon icon="money" size="28"></v-icon>
+                        </template>
+                        <v-card-title>Portokasse</v-card-title>
+                      </v-card-item>
+                      <v-card-text></v-card-text>
+                    </v-card>
+                  </v-col>
+                </v-row>
 
-<h1 class="title">Shipping Orders</h1>
+                <!-- Hero Card -->
+                <v-card class="mb-6" rounded="lg" elevation="4">
+                  <v-card-item>
+                    <v-card-title class="text-h4 font-weight-bold py-2">
+                      Hello, Vuetify 3! 👋
+                    </v-card-title>
+                    <v-card-subtitle>
+                      Vue 3 + Vuetify boilerplate — ready to build
+                    </v-card-subtitle>
+                  </v-card-item>
+                  <v-card-text>
+                    <p class="text-body-1 mb-4">
+                      This is a single-file Vue 3 + Vuetify 3 setup loaded
+                      entirely from CDN. No build step required.
+                    </p>
+                    <v-chip
+                      v-for="tag in tags"
+                      :key="tag"
+                      class="mr-2 mb-2"
+                      color="primary"
+                      variant="tonal"
+                      size="small"
+                    >
+                      {{ tag }}
+                    </v-chip>
+                  </v-card-text>
+                  <v-card-actions class="pa-4">
+                    <v-btn color="primary" variant="flat" @click="counter++">
+                      Clicked {{ counter }} time{{ counter !== 1 ? 's' : '' }}
+                    </v-btn>
+                    <v-btn variant="tonal" @click="showSnackbar = true">
+                      Show Snackbar
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-main>
 
-<div class="table-container">
-  <table class="table is-fullwidth is-striped is-hoverable">
-    <thead>
-      <tr>
-        <th>Invoice number</th>
-        <th>Description</th>
-        <th>Quantity</th>
-        <th>Unit Price</th>
-        <th>Customer Name</th>
-        <th>Contact Name</th>
-        <th>Address</th>
-        <th>City</th>
-        <th>Postal Code</th>
-        <th>Country</th>
-        <th width="500px"></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for order in orders %}
-      <tr>
-        <td>{{ order['invoice_number'] }}</td>
-        <td>{{ order['description'] }}</td>
-        <td>{{ order['quantity'] }}</td>
-        <td>{{ "%.2f"|format(order['unit_price']) }}</td>
-        <td>{{ order['name'] }}</td>
-        <td>{{ order['contact_name'] }}</td>
-        <td>{{ order['address'] }}</td>
-        <td>{{ order['city'] }}</td>
-        <td>{{ order['postal_code'] }}</td>
-        <td>
-          {{ order['country_code'] }}
-          <img
-            src="https://flagcdn.com/16x12/{{order['country_code'] | lower}}.png"
-            srcset="
-              https://flagcdn.com/32x24/{{order['country_code'] | lower}}.png 2x,
-              https://flagcdn.com/48x36/{{order['country_code'] | lower}}.png 3x
-            "
-            width="16"
-            height="12"
-            class="ml-3"
-          />
-        </td>
-        <td width="500px">
-          <div class="buttons" id="buttons-{{ order['invoice_id'] }}">
-            <div class="select is-small">
-              <select 
-                name="product_code"
-              >
-              <option value="21" {% if order['country_code'] == 'DE' %}selected{% endif %}>Grossbrief national</option>
-              <option value="10051" {% if order['country_code'] != 'DE' %}selected{% endif %}>Grossbrief international</option>
-              </select>
-            </div>
-            <button
-              class="button is-small is-info"
-              hx-post="/purchase/{{ order['invoice_id'] }}"
-              hx-include="previous select"
-              hx-target="#buttons-{{ order['invoice_id'] }}"
-              hx-swap="outerHTML"
-              {% if order['purchased'] %}disabled{% endif %}
-            >
-              <span class="icon">
-                <i class="mdi mdi-postage-stamp mdi-18px"></i>
-              </span>
-              <span>Internetmarke</span>
-            </button>
-            <button
-              class="button is-small is-info"
-              hx-post="/print/{{ order['invoice_id'] }}"
-              hx-swap="none"
-              {% if not order['purchased'] %}disabled{% endif %}
-            >
-              <span class="icon normal-icon">
-                <i class="fas fa-print"></i>
-              </span>
-              <span>Print</span>
-            </button>
-            <button 
-              class="button is-small is-info"
-              hx-post="/send/{{ order['invoice_id'] }}" 
-              hx-swap="none"
-              class="btn-primary">
-              <span class="icon normal-icon">
-                <i class="fas fa-envelope"></i>
-              </span>
-              <span>Send</span> 
-          </button>
-          </div>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="9" class="has-text-centered">
-          <span class="icon-text">
-            <span class="icon">
-              <i class="fas fa-inbox"></i>
-            </span>
-            <span>No orders found</span>
-          </span>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+        <!-- Snackbar -->
+        <v-snackbar v-model="showSnackbar" timeout="3000" color="primary">
+          Snackbar is working! 🎉
+          <template #actions>
+            <v-btn variant="text" @click="showSnackbar = false">Close</v-btn>
+          </template>
+        </v-snackbar>
+      </v-app>
+    </div>
 
-{% endblock %}
+    <!-- Vue 3 -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <!-- Vuetify JS -->
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3/dist/vuetify.min.js"></script>
+
+    <script>
+      const { createApp, ref, onMounted } = Vue;
+      const { createVuetify } = Vuetify;
+
+      const vuetify = createVuetify({
+        theme: {
+          defaultTheme: "dark",
+        },
+      });
+
+      createApp({
+        setup() {
+          const drawer = ref(false);
+          const counter = ref(0);
+          const showSnackbar = ref(false);
+
+          const internetmarke = ref({balance: 0.00});
+
+          const tags = ["Vue 3", "Vuetify 3", "CDN", "No build step"];
+
+          const navItems = [
+            { title: "Home", icon: "mdi-home" },
+            { title: "About", icon: "mdi-information" },
+            { title: "Settings", icon: "mdi-cog" },
+          ];
+
+          const features = [
+            {
+              title: "Composition API",
+              icon: "mdi-code-braces",
+              color: "primary",
+              text: "Uses Vue 3 setup() with refs and reactivity out of the box.",
+            },
+            {
+              title: "Vuetify 3",
+              icon: "mdi-vuetify",
+              color: "secondary",
+              text: "Full Material Design component library, dark mode included.",
+            },
+            {
+              title: "Zero Build",
+              icon: "mdi-lightning-bolt",
+              color: "success",
+              text: "No Node.js, no bundler — just open the file in a browser.",
+            },
+          ];
+
+          function toggleTheme() {
+            const theme = vuetify.theme.global;
+            theme.name.value = theme.current.value.dark ? "light" : "dark";
+          }
+
+          onMounted(async () => {
+            try {
+              const res = await fetch("/internetmarke/balance");
+              internetmarke.value = await res.json();
+            } catch (e) {
+              error.value = e.message;
+            }
+          });
+
+          return {
+            drawer,
+            counter,
+            showSnackbar,
+            tags,
+            navItems,
+            features,
+            toggleTheme,
+            internetmarke
+          };
+        },
+      })
+        .use(vuetify)
+        .mount("#app");
+    </script>
+  </body>
+</html>
