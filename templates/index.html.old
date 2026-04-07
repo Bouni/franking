@@ -1,0 +1,123 @@
+{% extends "base.html" %} {% block content %}
+
+<style>
+  /* Responsive table on mobile */
+  @media screen and (max-width: 768px) {
+    .table-container {
+      overflow-x: auto;
+    }
+  }
+</style>
+
+{% include 'partials/balance.html' %}
+
+{% include 'partials/material.html' %}
+
+<h1 class="title">Shipping Orders</h1>
+
+<div class="table-container">
+  <table class="table is-fullwidth is-striped is-hoverable">
+    <thead>
+      <tr>
+        <th>Invoice number</th>
+        <th>Description</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Customer Name</th>
+        <th>Contact Name</th>
+        <th>Address</th>
+        <th>City</th>
+        <th>Postal Code</th>
+        <th>Country</th>
+        <th width="500px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td>{{ order['invoice_number'] }}</td>
+        <td>{{ order['description'] }}</td>
+        <td>{{ order['quantity'] }}</td>
+        <td>{{ "%.2f"|format(order['unit_price']) }}</td>
+        <td>{{ order['name'] }}</td>
+        <td>{{ order['contact_name'] }}</td>
+        <td>{{ order['address'] }}</td>
+        <td>{{ order['city'] }}</td>
+        <td>{{ order['postal_code'] }}</td>
+        <td>
+          {{ order['country_code'] }}
+          <img
+            src="https://flagcdn.com/16x12/{{order['country_code'] | lower}}.png"
+            srcset="
+              https://flagcdn.com/32x24/{{order['country_code'] | lower}}.png 2x,
+              https://flagcdn.com/48x36/{{order['country_code'] | lower}}.png 3x
+            "
+            width="16"
+            height="12"
+            class="ml-3"
+          />
+        </td>
+        <td width="500px">
+          <div class="buttons" id="buttons-{{ order['invoice_id'] }}">
+            <div class="select is-small">
+              <select 
+                name="product_code"
+              >
+              <option value="21" {% if order['country_code'] == 'DE' %}selected{% endif %}>Grossbrief national</option>
+              <option value="10051" {% if order['country_code'] != 'DE' %}selected{% endif %}>Grossbrief international</option>
+              </select>
+            </div>
+            <button
+              class="button is-small is-info"
+              hx-post="/purchase/{{ order['invoice_id'] }}"
+              hx-include="previous select"
+              hx-target="#buttons-{{ order['invoice_id'] }}"
+              hx-swap="outerHTML"
+              {% if order['purchased'] %}disabled{% endif %}
+            >
+              <span class="icon">
+                <i class="mdi mdi-postage-stamp mdi-18px"></i>
+              </span>
+              <span>Internetmarke</span>
+            </button>
+            <button
+              class="button is-small is-info"
+              hx-post="/print/{{ order['invoice_id'] }}"
+              hx-swap="none"
+              {% if not order['purchased'] %}disabled{% endif %}
+            >
+              <span class="icon normal-icon">
+                <i class="fas fa-print"></i>
+              </span>
+              <span>Print</span>
+            </button>
+            <button 
+              class="button is-small is-info"
+              hx-post="/send/{{ order['invoice_id'] }}" 
+              hx-swap="none"
+              class="btn-primary">
+              <span class="icon normal-icon">
+                <i class="fas fa-envelope"></i>
+              </span>
+              <span>Send</span> 
+          </button>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" class="has-text-centered">
+          <span class="icon-text">
+            <span class="icon">
+              <i class="fas fa-inbox"></i>
+            </span>
+            <span>No orders found</span>
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
