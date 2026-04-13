@@ -1,0 +1,12 @@
+services:
+  franking-dev:
+    container_name: franking-dev
+    image: franking:dev
+    env_file:
+      - .env
+    ports:
+      - 8567:8000
+    volumes:
+      - /opt/docker/invio/labels:/app/labels
+      - /var/run/cups/cups.sock:/var/run/cups/cups.sock
+      - /etc/cups:/etc/cups:ro
