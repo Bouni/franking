@@ -10,7 +10,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from franking.invio import Invio
+from invio import Invio
 
 load_dotenv()
 
@@ -73,10 +73,3 @@ class Mail:
                 imaplib.Time2Internaldate(time.time()),
                 message.as_bytes(),
             )
-
-
-if __name__ == "__main__":
-    m = Mail("subject", "body")
-    m.send_invoice("88f29f86-037a-4afe-9b9e-5d3ac9bd7c4c")
-    # pdf = get_invoice_pdf("88f29f86-037a-4afe-9b9e-5d3ac9bd7c4c")
-    # send_invoice("bouni@owee.de", "Invoice BSH-Boards", "Attached you find the invoice for your BSH-Board order.", "INV-2026-03-024", pdf)

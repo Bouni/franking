@@ -1,13 +1,13 @@
 import logging
-from pathlib import Path
 import os
 import zipfile
+from pathlib import Path
 
 import inema.rest as ir
 from dotenv import load_dotenv
 from inema.data import products
 
-from franking.models import Address
+from models import Address
 
 load_dotenv()
 
@@ -59,8 +59,8 @@ class Internetmarke:
     def get_products(self):
         return products.items()
 
-    def is_purchased(self, invoice: str) -> bool:
-        label_file = Path(LABEL_PATH) / f"{invoice}.png"
+    def is_purchased(self, invoice_number: str) -> bool:
+        label_file = Path(LABEL_PATH) / f"{invoice_number}.png"
         return label_file.is_file()
 
     def check_health(self):
@@ -69,8 +69,8 @@ class Internetmarke:
     def user_profile(self):
         return self.session.profile()
 
-    def _extract_zip(self, path:Path, filename: str):
-        fp =path / f"{filename}.zip"
+    def _extract_zip(self, path: Path, filename: str):
+        fp = path / f"{filename}.zip"
         if not fp.is_file():
             logging.error(f"Zipfile {fp} not found!")
             return
@@ -79,7 +79,12 @@ class Internetmarke:
             os.rename(path / "0.png", path / f"{filename}.png")
 
     def order(
-        self, path: Path, invoice: str, receiver: Address, product: int, dryrun: bool = False
+        self,
+        path: Path,
+        invoice_number: str,
+        receiver: Address,
+        product: int,
+        dryrun: bool = False,
     ):
         oid = self.session.create_order()
         p = ir.mk_png_pos(
@@ -101,12 +106,12 @@ class Internetmarke:
         )
         t = ir.calc_total(p)
         body = ir.mk_png_req(oid, p, t)
-        fn = str(path / f"{invoice}.zip")
+        fn = str(path / f"{invoice_number}.zip")
         if not dryrun:
             logging.info("Checkout Internetmarke")
             d = self.session.checkout_png(body, fn)
             logging.info("Extract Internetmarke")
-            self._extract_zip(path, invoice)
+            self._extract_zip(path, invoice_number)
         else:
             logging.info("Dryrun, skip checkout Internetmarke")
             d = None

@@ -1,9 +1,27 @@
+import logging
+import socket
 from pathlib import Path
 
 from brother_ql.backends.helpers import send
 from brother_ql.conversion import convert
 from brother_ql.raster import BrotherQLRaster
 from PIL import Image
+
+
+class BrotherMFC:
+    def __init__(self, printer: str):
+        self.printer = printer
+
+    def print(self, pdf: bytes):
+        try:
+            # Port 9100 is the industry standard for raw printing (JetDirect)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(10)
+                s.connect((self.printer, 9100))
+                s.sendall(pdf)
+                logging.info("PDF successfully streamed to printer!")
+        except Exception as e:
+            logging.error(f"Network printing failed: {e}")
 
 
 class BrotherQL:
@@ -36,9 +54,10 @@ class BrotherQL:
             backend_identifier="network",
         )
 
-        print(status)
+        logging.info(status)
 
         if status["outcome"] == "sent":
-            print(f"Successfully printed {path}")
+            logging.info(f"Successfully printed {path}")
             return True
+        logging.error(f"Print for label {path} failed")
         return False

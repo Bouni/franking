@@ -12,3 +12,7 @@ wheels/
 labels
 tmp
 .env
+
+node_modules
+
+

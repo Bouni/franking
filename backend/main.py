@@ -1,30 +1,26 @@
-import json
 import logging
 import os
-import sqlite3
 import textwrap
 from pathlib import Path
 
 import pycountry
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form, Request, Response, status
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-from franking.internetmarke import Internetmarke
-from franking.invio import Invio
-from franking.mail import Mail
-from franking.models import Address
-from franking.printer import BrotherQL
+from internetmarke import Internetmarke
+from invio import Invio
+from mail import Mail
+from models import Address
+from printer import BrotherMFC, BrotherQL
 
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", default="False").lower() in ("true", "1", "t")
 
-print(f"DEBUG = {DEBUG}")
+logging.info(f"DEBUG = {DEBUG}")
 
-DB_PATH = os.getenv("DB_PATH", default="/opt/docker/invio/data/invio.db")
 LABEL_PATH = os.getenv("LABEL_PATH", default="/opt/docker/invio/labels")
 
 BASE_PATH = Path(__file__).resolve().parent.parent
@@ -33,12 +29,161 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
-templates = Jinja2Templates(directory="templates")
+
+@app.get("/api/invoices")
+async def invoices():
+    invio = Invio()
+    invoice_ids = [
+        (invoice.get("id"), invoice.get("customerId"))
+        for invoice in invio.get_invoices()
+        if invoice.get("status") in ("draft", "sent", "paid", "complete")
+    ]
+    invoices = []
+    for invoice_id, customer_id in invoice_ids:
+        invoices.append(invio.get_invoice_data(invoice_id))
+        invoices[-1]["customer"] = invio.get_customer_data(customer_id)
+
+    for invoice in invoices:
+        im = Path(LABEL_PATH) / f"{invoice.get('invoiceNumber')}.png"
+        invoice["internetmarke"] = im.is_file()
+
+    invoices.sort(key=lambda x: x["invoiceNumber"], reverse=True)
+    return JSONResponse({"invoices": invoices})
 
 
-@app.get("/")
-def index(request: Request):
-    return FileResponse("templates/index.html")
+@app.get("/api/invoices/{invoice_id}/paid")
+async def mark_invoice_paid(invoice_id):
+    invio = Invio()
+    invio.set_status_paid(invoice_id)
+    return JSONResponse({"success": True})
+
+
+@app.post("/api/invoices/print")
+def print_invoice(data: dict):
+    invio = Invio()
+    invoice_pdf = invio.get_invoice_pdf(data.get("invoice_id", ""))
+    printer = BrotherMFC("192.168.88.21")
+    printer.print(invoice_pdf)
+    return JSONResponse({"success": True})
+
+
+@app.post("/api/invoices/email")
+def send_invoice_email(data: dict):
+    invio = Invio()
+    invoice_data = invio.get_invoice_data(data.get("invoice_id", ""))
+    subject = f"Invoice {invoice_data.get('invoiceNumber')} (BSH-Board)"
+    body = textwrap.dedent(f"""
+        Hi {invoice_data.get("customer", {}).get("name")},
+
+        Im Anhang findest du die Rechnung für deine Bestellung.
+        Diese beinhaltet Zahlungsinformationen für Banküberweisungen und PayPal.
+
+        Sobald ich die Zahlung erhalten habe versende ich in aller Regel am nächsten Werktag.
+
+        Vielen Dank für die Bestellung!
+
+        -------------------------------------------------------------------------------------
+
+        Attached you find the invoice for your order.
+        It contains payment info for bank transfer as well as for PayPal.
+
+        As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
+
+        Thank you very much for your Order!
+
+        -------------------------------------------------------------------------------------
+
+        Bouni
+
+        P.S. Sorry to those of you who are non german speakers for the german invoice, my invoicing software does not yet allow localized invoices 😅
+        """).strip()
+    m = Mail(subject, body)
+    m.send_invoice(data.get("invoice_id"))
+    invio = Invio()
+    invio.set_status_sent(data.get("invoice_id"))
+    return JSONResponse({"success": True})
+
+
+@app.get("/api/internetmarke/balance")
+async def internetmarke_balance():
+    im = Internetmarke()
+    return JSONResponse({"balance": im.get_balance()})
+
+
+@app.post("/api/internetmarke/purchase")
+def purchase_internetmarke(data: dict):
+    if code := pycountry.countries.get(alpha_2=data["countryCode"].upper()):
+        data["countryCode"] = code.alpha_3
+    else:
+        return JSONResponse({"success": False, "msg": "Failed to convert contry code"})
+
+    # create address from data
+    address = Address(
+        name=data["name"],
+        address=data["address"],
+        city=data["city"],
+        postcode=data["postalCode"],
+        country=data["countryCode"],
+    )
+
+    if not Path(LABEL_PATH).is_dir():
+        logging.error(f"Label path {LABEL_PATH} is not a directory")
+        return JSONResponse(
+            {"success": False, "msg": f"Label path ({LABEL_PATH}) does not exist!"}
+        )
+
+    if DEBUG:
+        logging.info("DEBUG active, Internetmarke dryrun")
+        return JSONResponse(
+            {"success": True, "msg": "Debug mode active, no Internetmarke purchased"}
+        )
+
+    if data["countryCode"] == "DE":
+        product_code = 21
+    else:
+        product_code = 10051
+
+    im = Internetmarke()
+    im.order(
+        Path(LABEL_PATH), data["invoiceNumber"], address, product_code, dryrun=DEBUG
+    )
+    logging.info("Internetmarke purchased")
+    return JSONResponse({"success": True, "msg": "Internetmarke purchased"})
+
+
+@app.post("/api/internetmarke/print")
+async def print_internetmarke(data: dict):
+    ql = BrotherQL()
+    invoice_number = data.get("invoice_number")
+    label = Path(LABEL_PATH) / f"{invoice_number}.png"
+    if not label.is_file():
+        logging.info(f"No Internetmarke found for invoice number {invoice_number}")
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": "No Internetmarke found for invoice number {invoice_number}",
+            }
+        )
+    result = ql.print_label(label)
+    if result:
+        logging.info("Internetmarke purchased")
+        return JSONResponse({"success": True, "msg": "Internetmarke printed"})
+    else:
+        logging.info("Printing failed")
+        return JSONResponse({"success": False, "msg": "Printing failed"})
+
+
+app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    # Check if the requested path exists as a static file
+    file_path = os.path.join("static", full_path)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    # Otherwise, return index.html to let Vue Router handle it
+    return FileResponse("static/index.html")
 
 
 # def get_db():
@@ -86,10 +231,6 @@ def index(request: Request):
 #     )
 
 
-@app.get("/internetmarke/balance")
-def internetmarke_balance(request: Request):
-    im = Internetmarke()
-    return JSONResponse({"balance": im.get_balance()})
 #
 #
 # @app.get("/material/reserved")
@@ -99,7 +240,7 @@ def internetmarke_balance(request: Request):
 # ):
 #     cursor = db.cursor()
 #     cursor.execute("""
-#         SELECT 
+#         SELECT
 #             ii.description AS Article,
 #             SUM(ii.quantity) || ' pcs' AS Total
 #         FROM invoice_items ii
@@ -126,7 +267,7 @@ def internetmarke_balance(request: Request):
 #     im = Internetmarke()
 #     cursor = db.cursor()
 #     cursor.execute(f"""
-#         SELECT 
+#         SELECT
 #             ii.invoice_id,
 #             ii.description,
 #             ii.quantity,
