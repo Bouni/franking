@@ -1,8 +1,14 @@
 # franking
 
-A [invio](https://github.com/kittendevv/Invio) sidecar project that allows to purchase Deutsche Post [Internetmarken](https://shop.deutschepost.de/internetmarke) and print them on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w).
+A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to perform various actions very fast.
 
-It reads the Invio sqlite3 database to fetch all orders that have a item with "Versand" in the description and shows them as a simple list with buttons for selcting the product type (national or international up to 500g), a button for purchasing the Internetmarke and one for printing the actual label.
+- send invoice as an email attachment and mark invoice as sent
+- mark invoice as paid
+- purchase Deutsche Post [Internetmarken](https://shop.deutschepost.de/internetmarke) 
+- print the Internetmarke on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w)
+- print the invoice on paper 
+
+All data is read via the Invio API.
 
 The whole project is rather hacky and not really customizable, but maybe someone finds it useful anyway :-)
 
@@ -11,7 +17,8 @@ The whole project is rather hacky and not really customizable, but maybe someone
 The tech stack:
 
  - [FastAPI](https://fastapi.tiangolo.com/)
- - [HTMX](https://htmx.org/)
+ - [Vue3](https://vuejs.org/)
+ - [Vuetify](https://vuetifyjs.com/)
  - [python-inema](https://codeberg.org/gms/python-inema)
  - [brother_ql](https://github.com/pklaus/brother_ql)
 
