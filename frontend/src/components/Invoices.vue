@@ -131,9 +131,11 @@ const {
 } = appStore;
 
 const status_colors = {
-  draft: "grey",
-  sent: "blue",
-  paid: "green",
+  complete: "#ff7d5d",
+  draft: "#242933",
+  sent: "#28ebff",
+  paid: "#62efbd",
+  voided: "#1c212b"
 } as const;
 
 const headers = [
