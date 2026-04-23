@@ -46,7 +46,7 @@
               <template v-slot:activator="{ props }">
                 <v-btn
                   v-bind="props"
-                  :disabled="item.status !== 'draft' || item.customer.email === ''"
+                  :disabled="item.customer.email === ''"
                   :loading="isLoading === 'sendInvoice'"
                   class="ma-2"
                   color="lime-accent-3"
