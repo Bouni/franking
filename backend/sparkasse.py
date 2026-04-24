@@ -1,4 +1,3 @@
-                            )0
 import datetime
 import logging
 import os
@@ -26,17 +25,33 @@ logging.basicConfig(level=logging.INFO)
 
 class Sparkasse:
     def __init__(self):
-        self.client = FinTS3PinTanClient(
-            SPK_BLZ, 
-            SPK_USER,
-            SPK_PIN,
-            "https://banking-bw1.s-fints-pt-bw.de/fints30",
-            product_id=SPK_PRODUCT_ID, 
-        )
-        self.client.fetch_tan_mechanisms()
-        mechs = self.client.get_tan_mechanisms()
-        print(mechs)
-        self.client.set_tan_mechanism("923")
+        self.state_file = "fints_state.bin"
+        self.client = None
+
+        if os.path.exists(self.state_file):
+            with open(self.state_file, "rb") as f:
+                self.client = FinTS3PinTanClient(
+                    SPK_BLZ,
+                    SPK_USER,
+                    SPK_PIN,
+                    "https://banking-bw1.s-fints-pt-bw.de/fints30",
+                    from_data=f.read(),
+                    product_id=SPK_PRODUCT_ID,
+                )
+        else:
+            self.client = FinTS3PinTanClient(
+                SPK_BLZ,
+                SPK_USER,
+                SPK_PIN,
+                "https://banking-bw1.s-fints-pt-bw.de/fints30",
+                product_id=SPK_PRODUCT_ID,
+            )
+            self.client.fetch_tan_mechanisms()
+            self.client.set_tan_mechanism("923")
+
+    def save_client_state(self):
+        with open(self.state_file, "wb") as f:
+            f.write(self.client.deconstruct(including_private=True))
 
     def get_invoice_number(self, purpose: str):
         r = re.search(r"INV-\d{4}-\d{2}-\d{3}", purpose)
@@ -46,6 +61,16 @@ class Sparkasse:
 
     def fetch_transactions(self):
         with self.client:
+            if isinstance(self.client.init_tan_response, NeedTANResponse):
+                if self.client.init_tan_response.decoupled:
+                    print("Waiting for SPK App approval...")
+                    while isinstance(self.client.init_tan_response, NeedTANResponse):
+                        time.sleep(2)
+                        self.client.init_tan_response = self.client.send_tan(
+                            self.client.init_tan_response, None
+                        )
+                self.save_client_state()
+
             account = SEPAAccount(
                 iban=SPK_IBAN,
                 bic=SPK_BIC,
@@ -53,15 +78,6 @@ class Sparkasse:
                 subaccount=SPK_SUB_ACCOUNT,
                 blz=SPK_BLZ,
             )
-
-            if isinstance(self.client.init_tan_response, NeedTANResponse):
-                if self.client.init_tan_response.decoupled:
-                    print("Waiting for SPK App approval...")
-                    while isinstance(self.client.init_tan_response, NeedTANResponse):
-                        time.sleep(1)
-                        self.client.init_tan_response = self.client.send_tan(
-                            self.client.init_tan_response, None
-                        )
             transactions = self.client.get_transactions(
                 account,
                 datetime.date.today() - datetime.timedelta(days=30),
