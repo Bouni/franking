@@ -47,7 +47,7 @@ async def check_payments():
     pprint.pprint(t1)
     pprint.pprint(t2)
     paid_numbers = {
-        str(t.get("invoiceNumber")) for t in (t1 + t2) if t.get("invoiceNumber")
+        str(t.get("invoice")) for t in (t1 + t2) if t.get("invoice")
     }
 
     # 3. Handle the async Invio part normally
