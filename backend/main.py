@@ -50,6 +50,7 @@ async def check_payments():
 
     # 3. Handle the async Invio part normally
     async with await Invio.create() as invio:
+        paid_invoices = []
         raw_invoices = await invio.get_invoices()
 
         for i in raw_invoices:
@@ -59,10 +60,12 @@ async def check_payments():
                 if inv_num in paid_numbers:
                     # Logic for a match
                     print(f"Match found: {inv_num}")
+                    invio.set_status_paid(i.get("id"))
+                    paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber")})
                 else:
                     print(f"No payment seen for: {inv_num}")
 
-    return {"status": "success", "processed": len(raw_invoices)}
+    return {"status": "success", "processed": len(raw_invoices), "paid": len(paid_invoices), "paid_invoices": paid_invoices}
 
 
 @app.get("/api/invoices")
