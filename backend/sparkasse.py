@@ -19,13 +19,14 @@ SPK_BIC = os.getenv("SPK_BIC")
 SPK_ACCOUNT = os.getenv("SPK_ACCOUNT")
 SPK_SUB_ACCOUNT = os.getenv("SPK_SUB_ACCOUNT")
 SPK_BLZ = os.getenv("SPK_BLZ")
+SPK_FINTS_PATH = os.getenv("SPK_FINTS_PATH", "fints_state.bin")
 
 logging.basicConfig(level=logging.INFO)
 
 
 class Sparkasse:
     def __init__(self):
-        self.state_file = "fints_state.bin"
+        self.state_file = SPK_FINTS_PATH
         self.client = None
 
         if os.path.exists(self.state_file):
@@ -99,9 +100,7 @@ class Sparkasse:
                         }
                     )
 
-            for t in transaction_data:
-                pprint.pprint(t)
-
+            return transaction_data
 
 if __name__ == "__main__":
     spk = Sparkasse()
