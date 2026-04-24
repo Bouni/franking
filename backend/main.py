@@ -62,7 +62,7 @@ async def check_payments():
                 if inv_num in paid_numbers:
                     # Logic for a match
                     print(f"Match found: {inv_num}")
-                    r = invio.set_status_paid(i.get("id"))
+                    r = await invio.set_status_paid(i.get("id"))
                     print(r)
                     paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber")})
                 else:
