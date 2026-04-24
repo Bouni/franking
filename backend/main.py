@@ -34,23 +34,29 @@ app = FastAPI()
 @app.get("/api/payments/check")
 async def check_payments():
     pp = PayPal()
-    t1 = pp.fetch_transactions()
     spk = Sparkasse()
+    t1 = pp.fetch_transactions()
     t2 = spk.fetch_transactions()
-    async with await Invio.create() as invio:
-        raw_invoices = await invio.get_invoices()
-        invoices = [
-                {"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber")}
-            for i in raw_invoices
-            if i.get("status") == "sent"
-        ]
-        for invoice in invoices:
-            if any(item.get("invoiceNumber") == invoice.get("invoiceNumber") for item in t1):
-                print(f"Payed via PayPal: {invoice.get('invoiceNumber')}")
-            if any(item.get("invoiceNumber") == invoice.get("invoiceNumber") for item in t2):
-                print(f"Payed via SEPA: {invoice.get('invoiceNumber')}")
-                
 
+    async def process_invoices():
+        async with await Invio.create() as invio:
+            raw_invoices = await invio.get_invoices()
+            
+            # Use a Set for the numbers to make lookups nearly instant (O(1) vs O(n))
+            paid_numbers = {t.get("invoiceNumber") for t in t1 + t2}
+            
+            for i in raw_invoices:
+                if i.get("status") == "sent":
+                    num = i.get("invoiceNumber")
+                    if num in paid_numbers:
+                        # You likely want to return this or update a DB, not just print
+                        print(f"Match found for invoice: {num}")
+
+    # Logic to run the async portion
+    import asyncio
+    asyncio.run(process_invoices())
+    
+    return {"status": "checked"}
 
 @app.get("/api/invoices")
 async def invoices():
