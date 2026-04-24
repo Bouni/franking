@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-
+import pprint
 from internetmarke import Internetmarke
 from invio import Invio
 from mail import Mail
@@ -44,6 +44,8 @@ async def check_payments():
 
     # 2. Optimized matching using Sets (Instant lookup)
     # This combines both sources into one "lookup bucket"
+    pprint.pprint(t1)
+    pprint.pprint(t2)
     paid_numbers = {
         str(t.get("invoiceNumber")) for t in (t1 + t2) if t.get("invoiceNumber")
     }
