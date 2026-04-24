@@ -90,7 +90,6 @@ class Sparkasse:
                 if "INV" in transaction.data.get("purpose"):
                     transaction_data.append(
                         {
-                            "purpose": transaction.data.get("purpose"),
                             "invoice": self.get_invoice_number(
                                 transaction.data.get("purpose")
                             ),

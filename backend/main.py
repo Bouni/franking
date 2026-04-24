@@ -2,7 +2,7 @@ import logging
 import os
 import textwrap
 from pathlib import Path
-
+import asyncio
 import pycountry
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -14,6 +14,8 @@ from invio import Invio
 from mail import Mail
 from models import Address
 from printer import BrotherMFC, BrotherQL
+from sparkasse import Sparkasse
+from paypal import PayPal
 
 load_dotenv()
 
@@ -29,26 +31,54 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
+@app.get("/api/payments/check")
+async def check_payments():
+    pp = PayPal()
+    t1 = pp.fetch_transactions()
+    spk = Sparkasse()
+    t2 = spk.fetch_transactions()
+    async with await Invio.create() as invio:
+        raw_invoices = await invio.get_invoices()
+        invoices = [
+                {"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber")}
+            for i in raw_invoices
+            if i.get("status") == "sent"
+        ]
+        for invoice in invoices:
+            if any(item.get("invoiceNumber") == invoice.get("invoiceNumber") for item in t1):
+                print(f"Payed via PayPal: {invoice.get('invoiceNumber')}")
+            if any(item.get("invoiceNumber") == invoice.get("invoiceNumber") for item in t2):
+                print(f"Payed via SEPA: {invoice.get('invoiceNumber')}")
+                
+
 
 @app.get("/api/invoices")
 async def invoices():
-    invio = Invio()
-    invoice_ids = [
-        (invoice.get("id"), invoice.get("customerId"))
-        for invoice in invio.get_invoices()
-        if invoice.get("status") in ("draft", "sent", "paid", "complete")
-    ]
-    invoices = []
-    for invoice_id, customer_id in invoice_ids:
-        invoices.append(invio.get_invoice_data(invoice_id))
-        invoices[-1]["customer"] = invio.get_customer_data(customer_id)
+    async with await Invio.create() as invio:
+        raw_invoices = await invio.get_invoices()
+        invoice_ids = [
+            (i.get("id"), i.get("customerId"))
+            for i in raw_invoices
+            if i.get("status") in ("draft", "sent", "paid", "complete")
+        ]
 
-    for invoice in invoices:
-        im = Path(LABEL_PATH) / f"{invoice.get('invoiceNumber')}.png"
-        invoice["internetmarke"] = im.is_file()
+        async def fetch_full_invoice(inv_id, cust_id):
+            inv_data, cust_data = await asyncio.gather(
+                invio.get_invoice_data(inv_id),
+                invio.get_customer_data(cust_id)
+            )
+            inv_data["customer"] = cust_data
+            
+            im = Path(LABEL_PATH) / f"{inv_data.get('invoiceNumber')}.png"
+            inv_data["internetmarke"] = im.is_file()
+            return inv_data
 
-    invoices.sort(key=lambda x: x["invoiceNumber"], reverse=True)
-    return JSONResponse({"invoices": invoices})
+        invoices = await asyncio.gather(
+            *[fetch_full_invoice(iid, cid) for iid, cid in invoice_ids]
+        )
+
+        invoices.sort(key=lambda x: x.get("invoiceNumber", 0), reverse=True)
+        return {"invoices": invoices}
 
 
 @app.get("/api/invoices/{invoice_id}/paid")
