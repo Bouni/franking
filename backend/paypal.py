@@ -21,7 +21,6 @@ class PayPal:
                 auth=(CLIENT_ID, SECRET),
                 data={"grant_type": "client_credentials"}
             )
-            pprint.pprint(token_resp.json())
             token = token_resp.json().get('access_token')
             start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ')
             headers = {"Authorization": f"Bearer {token}"}
