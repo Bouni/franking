@@ -42,15 +42,10 @@ async def check_payments():
     t1 = await anyio.to_thread.run_sync(pp.fetch_transactions)
     t2 = await anyio.to_thread.run_sync(spk.fetch_transactions)
 
-    # 2. Optimized matching using Sets (Instant lookup)
-    # This combines both sources into one "lookup bucket"
-    pprint.pprint(t1)
-    pprint.pprint(t2)
     paid_numbers = {
         str(t.get("invoice")) for t in (t1 + t2) if t.get("invoice")
     }
 
-    # 3. Handle the async Invio part normally
     async with await Invio.create() as invio:
         paid_invoices = []
         raw_invoices = await invio.get_invoices()
@@ -60,10 +55,8 @@ async def check_payments():
                 inv_num = str(i.get("invoiceNumber"))
 
                 if inv_num in paid_numbers:
-                    # Logic for a match
                     print(f"Match found: {inv_num}")
-                    r = await invio.set_status_paid(i.get("id"))
-                    print(r)
+                    await invio.set_status_paid(i.get("id"))
                     paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber")})
                 else:
                     print(f"No payment seen for: {inv_num}")
