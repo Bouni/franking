@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
 import textwrap
 from pathlib import Path
-import asyncio
+
+import anyio
 import pycountry
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -13,9 +15,9 @@ from internetmarke import Internetmarke
 from invio import Invio
 from mail import Mail
 from models import Address
+from paypal import PayPal
 from printer import BrotherMFC, BrotherQL
 from sparkasse import Sparkasse
-from paypal import PayPal
 
 load_dotenv()
 
@@ -31,32 +33,37 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
+
 @app.get("/api/payments/check")
 async def check_payments():
     pp = PayPal()
     spk = Sparkasse()
-    t1 = pp.fetch_transactions()
-    t2 = spk.fetch_transactions()
 
-    async def process_invoices():
-        async with await Invio.create() as invio:
-            raw_invoices = await invio.get_invoices()
-            
-            # Use a Set for the numbers to make lookups nearly instant (O(1) vs O(n))
-            paid_numbers = {t.get("invoiceNumber") for t in t1 + t2}
-            
-            for i in raw_invoices:
-                if i.get("status") == "sent":
-                    num = i.get("invoiceNumber")
-                    if num in paid_numbers:
-                        # You likely want to return this or update a DB, not just print
-                        print(f"Match found for invoice: {num}")
+    t1 = await anyio.to_thread.run_sync(pp.fetch_transactions)
+    t2 = await anyio.to_thread.run_sync(spk.fetch_transactions)
 
-    # Logic to run the async portion
-    import asyncio
-    asyncio.run(process_invoices())
-    
-    return {"status": "checked"}
+    # 2. Optimized matching using Sets (Instant lookup)
+    # This combines both sources into one "lookup bucket"
+    paid_numbers = {
+        str(t.get("invoiceNumber")) for t in (t1 + t2) if t.get("invoiceNumber")
+    }
+
+    # 3. Handle the async Invio part normally
+    async with await Invio.create() as invio:
+        raw_invoices = await invio.get_invoices()
+
+        for i in raw_invoices:
+            if i.get("status") == "sent":
+                inv_num = str(i.get("invoiceNumber"))
+
+                if inv_num in paid_numbers:
+                    # Logic for a match
+                    print(f"Match found: {inv_num}")
+                else:
+                    print(f"No payment seen for: {inv_num}")
+
+    return {"status": "success", "processed": len(raw_invoices)}
+
 
 @app.get("/api/invoices")
 async def invoices():
@@ -70,11 +77,10 @@ async def invoices():
 
         async def fetch_full_invoice(inv_id, cust_id):
             inv_data, cust_data = await asyncio.gather(
-                invio.get_invoice_data(inv_id),
-                invio.get_customer_data(cust_id)
+                invio.get_invoice_data(inv_id), invio.get_customer_data(cust_id)
             )
             inv_data["customer"] = cust_data
-            
+
             im = Path(LABEL_PATH) / f"{inv_data.get('invoiceNumber')}.png"
             inv_data["internetmarke"] = im.is_file()
             return inv_data
