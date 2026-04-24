@@ -94,17 +94,17 @@ async def invoices():
 
 @app.get("/api/invoices/{invoice_id}/paid")
 async def mark_invoice_paid(invoice_id):
-    invio = Invio()
-    invio.set_status_paid(invoice_id)
+    async with await Invio.create() as invio:
+        await invio.set_status_paid(invoice_id)
     return JSONResponse({"success": True})
 
 
 @app.post("/api/invoices/print")
 def print_invoice(data: dict):
-    invio = Invio()
-    invoice_pdf = invio.get_invoice_pdf(data.get("invoice_id", ""))
+    async with await Invio.create() as invio:
+        invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
     printer = BrotherMFC("192.168.88.21")
-    printer.print(invoice_pdf)
+    await anyio.to_thread.run_sync(printer.print, invoice_pdf)
     return JSONResponse({"success": True})
 
 
