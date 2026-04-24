@@ -100,7 +100,7 @@ async def mark_invoice_paid(invoice_id):
 
 
 @app.post("/api/invoices/print")
-def print_invoice(data: dict):
+async def print_invoice(data: dict):
     async with await Invio.create() as invio:
         invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
     printer = BrotherMFC("192.168.88.21")
