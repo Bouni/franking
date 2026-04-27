@@ -24,9 +24,7 @@
             class="mr-2"
             alt=""
           />
-
           <span class="mx-1">Update</span>
-
           <img
             src="@/assets/PayPal.svg"
             width="20"
@@ -104,7 +102,7 @@
                 <v-btn
                   v-bind="props"
                   :disabled="item.status !== 'sent'"
-                  :loading="isLoading === 'markInvoicePaid'"
+                  :loading="isLoading === 'markInvoicePaid' && loadingId === item.id"
                   class="ma-2"
                   color="green"
                   icon="mdi-currency-eur"
@@ -164,7 +162,7 @@ import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
 
 const appStore = useAppStore();
-const { isLoading, invoices } = storeToRefs(appStore);
+const { isLoading, loadingId, invoices } = storeToRefs(appStore);
 const {
   printInternetmarke,
   purchaseInternetmarke,
@@ -172,7 +170,7 @@ const {
   fetchInvoices,
   printInvoice,
   sendInvoice,
-  updatePayments
+  updatePayments,
 } = appStore;
 
 const status_colors = {

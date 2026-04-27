@@ -9,7 +9,23 @@ export const useAppStore = defineStore("app", () => {
   const internetmarke = ref({ balance: 0.0 });
   const invoices = ref<any[]>([]);
   const isLoading = ref<string | boolean>(false);
+  const loadingId = ref<number | string | null>(null);
   const error = ref<string | null>(null);
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  function showToast(text: string, color: string, duration: number) {
+    Toastify({
+      text: text,
+      duration: duration,
+      gravity: "bottom",
+      position: "center",
+      style: {
+        background: color,
+        color: "#000",
+      },
+    }).showToast();
+  }
 
   async function fetchBalance() {
     isLoading.value = "fetchBalance";
@@ -41,20 +57,22 @@ export const useAppStore = defineStore("app", () => {
 
   async function markInvoicePaid(invoice_id: string) {
     isLoading.value = "markInvoicePaid";
+    loadingId.value = invoice_id;
     error.value = null;
 
     try {
-      await api.get(`/invoices/${invoice_id}/paid`);
-      const invoice = invoices.value.find((inv) => inv.id === invoice_id);
-      if (invoice) {
-        invoice.status = "paid";
-      } else {
-        console.error("Invoice not found");
-      }
+      await sleep(3000);
+      // await api.get(`/invoices/${invoice_id}/paid`);
+      // const invoice = invoices.value.find((inv) => inv.id === invoice_id);
+      // if (invoice) {
+      //   invoice.status = "paid";
+      // } else {
+      //   console.error("Invoice not found");
+      // }
     } catch (err: any) {
       error.value = err.message || "Failed to mark invoice paid";
     } finally {
-      isLoading.value = false;
+      loadingId.value = null;
     }
   }
 
@@ -138,31 +156,17 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.get("/payments/check");
       if (response.data.paid > 0) {
         response.data.paid_invoices.forEach((inv: any) => {
-          Toastify({
-            text: `Invoice ${inv.invoiceNumber} paid!`,
-            duration: 3000,
-            gravity: "top",
-            position: "right",
-            style: {
-              background: "#62efbd", // Your 'paid' color
-              color: "#000",
-            },
-          }).showToast();
+          showToast(`Invoice ${inv.invoiceNumber} paid!`, "#62efbd", 10);
         });
+        showToast("No new paid invoices!", "#62efbd", 10);
       } else {
-        Toastify({
-          text: "No new paid invoices",
-          duration: 3000,
-          gravity: "top",
-          position: "right",
-          style: {
-            background: "#62efbd", // Your 'paid' color
-            color: "#000",
-          },
-        }).showToast();
       }
     } catch (err: any) {
-      error.value = err.message || "Failed to print Internetmarke";
+      showToast(
+        `Error updating payments: ${err.msg || "Error updating payments"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -173,6 +177,7 @@ export const useAppStore = defineStore("app", () => {
     invoices,
     error,
     isLoading,
+    loadingId,
     fetchBalance,
     fetchInvoices,
     markInvoicePaid,
