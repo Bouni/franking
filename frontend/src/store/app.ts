@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
+import Toastify from 'toastify-js'
+import "toastify-js/src/toastify.css"
 
 export const useAppStore = defineStore("app", () => {
   // State (ref)
@@ -128,6 +130,31 @@ export const useAppStore = defineStore("app", () => {
       isLoading.value = false;
     }
   }
+  
+  async function updatePayments() {
+    isLoading.value = "updatePayments";
+    error.value = null;
+
+    try {
+      const response = await api.get("/payments/check");
+      response.data.paid_invoices.forEach((inv) => {
+        Toastify({
+          text: `Invoice ${inv.invoiceNumber} paid!`,
+          duration: 3000,
+          gravity: "top", 
+          position: "right",
+          style: {
+            background: "#62efbd", // Your 'paid' color
+            color: "#000"
+          }
+        }).showToast();
+      });
+    } catch (err: any) {
+      error.value = err.message || "Failed to print Internetmarke";
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   return {
     internetmarke,
@@ -140,6 +167,7 @@ export const useAppStore = defineStore("app", () => {
     printInternetmarke,
     purchaseInternetmarke,
     printInvoice,
-    sendInvoice
+    sendInvoice,
+    updatePayments
   };
 });

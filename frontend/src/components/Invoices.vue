@@ -11,7 +11,11 @@
         ></v-switch>
       </v-col>
       <v-col>
-        <v-btn color="primary" class="px-4">
+        <v-btn
+          color="primary"
+          class="px-4 mt-3 ml-5"
+          :loading="isLoading === 'updatePayments'"
+        >
           <img
             src="@/assets/Sparkasse.svg"
             width="20"
@@ -167,6 +171,7 @@ const {
   fetchInvoices,
   printInvoice,
   sendInvoice,
+  updatePayments
 } = appStore;
 
 const status_colors = {
@@ -202,6 +207,11 @@ const headers = [
     sortable: false,
   },
 ] as const;
+
+const handleUpdatePayments = () => {
+  const response = updatePayments();
+
+}
 
 // Fetch data when the component loads
 onMounted(() => {
