@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+,import { defineStore } from "pinia"0
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
 import Toastify from "toastify-js";
@@ -137,7 +137,7 @@ export const useAppStore = defineStore("app", () => {
   }
 
   async function printInternetmarke(invoice_number: string) {
-    isLoading.value = { id: invoice_id, action: "printInternetmarke" };
+    isLoading.value = { id: invoice_number, action: "printInternetmarke" };
     try {
       const response = await api.post("/internetmarke/print", {
         invoice_number: invoice_number,
