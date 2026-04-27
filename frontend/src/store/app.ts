@@ -1,3 +1,5 @@
+loadingId0;
+isLoading.value = false0;
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
@@ -5,14 +7,18 @@ import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
 
 export const useAppStore = defineStore("app", () => {
-  // State (ref)
+  interface LoadingState {
+    id: number | string;
+    action: "markPaid" | "fetchBalance"; // | 'send' | 'print' | 'delete' | 'markPaid';
+  }
+
   const internetmarke = ref({ balance: 0.0 });
   const invoices = ref<any[]>([]);
-  const isLoading = ref<string | boolean>(false);
-  const loadingId = ref<number | string | null>(null);
+  const isLoading = ref<LoadingState | null>(null);
   const error = ref<string | null>(null);
 
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   function showToast(text: string, color: string, duration: number) {
     Toastify({
@@ -28,7 +34,7 @@ export const useAppStore = defineStore("app", () => {
   }
 
   async function fetchBalance() {
-    isLoading.value = "fetchBalance";
+    isLoading.value = { id: "", action: "fetchBalance" };
     error.value = null;
 
     try {
@@ -37,12 +43,12 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       error.value = err.message || "Failed to fetch balance";
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
   async function fetchInvoices() {
-    isLoading.value = "fetchInvoices";
+    isLoading.value = { id: "", action: "fetchInvoices" };
     error.value = null;
 
     try {
@@ -51,13 +57,12 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       error.value = err.message || "Failed to fetch invoices";
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
   async function markInvoicePaid(invoice_id: string) {
-    isLoading.value = "markInvoicePaid";
-    loadingId.value = invoice_id;
+    isLoading.value = { id: invoice_id, action: "markInvoicePaid" };
     error.value = null;
 
     try {
@@ -77,7 +82,7 @@ export const useAppStore = defineStore("app", () => {
   }
 
   async function printInvoice(invoice_id: string) {
-    isLoading.value = "printInvoice";
+    isLoading.value = { id: invoice_id, action: "printInvoice" };
     error.value = null;
 
     try {
@@ -85,12 +90,12 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       error.value = err.message || "Failed to print invoice";
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
   async function sendInvoice(invoice_id: string) {
-    isLoading.value = "sendInvoice";
+    isLoading.value = { id: invoice_id, action: "sendInvoice" };
     error.value = null;
 
     try {
@@ -104,12 +109,12 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       error.value = err.message || "Failed to send invoice";
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
   async function printInternetmarke(invoice_number: string) {
-    isLoading.value = "printInternetmarke";
+    isLoading.value = { id: invoice_id, action: "printInternetmarke" };
     error.value = null;
 
     try {
@@ -119,12 +124,12 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       error.value = err.message || "Failed to print Internetmarke";
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
   async function purchaseInternetmarke(invoice_id: string) {
-    isLoading.value = "purchaseInternetmarke";
+    isLoading.value = { id: invoice_id, action: "purchaseInternetmarke" };
     error.value = null;
 
     try {
@@ -144,12 +149,12 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       error.value = err.message || "Failed to purchase Internetmarke";
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
   async function updatePayments() {
-    isLoading.value = "updatePayments";
+    isLoading.value = { id: "", action: "updatePayments" };
     error.value = null;
 
     try {
@@ -168,7 +173,7 @@ export const useAppStore = defineStore("app", () => {
         10,
       );
     } finally {
-      isLoading.value = false;
+      isLoading.value = null;
     }
   }
 
@@ -177,7 +182,6 @@ export const useAppStore = defineStore("app", () => {
     invoices,
     error,
     isLoading,
-    loadingId,
     fetchBalance,
     fetchInvoices,
     markInvoicePaid,

@@ -14,7 +14,7 @@
         <v-btn
           color="primary"
           class="px-4 mt-3 ml-5"
-          :loading="isLoading === 'updatePayments'"
+          :loading="isLoading?.action === 'updatePayments'"
           @click="updatePayments()"
         >
           <img
@@ -41,8 +41,8 @@
           :headers="headers"
           :items="filteredInvoices"
           :loading="
-            isLoading === 'fetchInvoices' ||
-            (isLoading === false && invoices.length === 0)
+            isLoading?.action === 'fetchInvoices' ||
+            (isLoading === null && invoices.length === 0)
           "
         >
           <template v-slot:loading>
@@ -89,7 +89,10 @@
                 <v-btn
                   v-bind="props"
                   :disabled="item.customer.email === ''"
-                  :loading="isLoading === 'sendInvoice'"
+                  :loading="
+                    isLoading?.action === 'sendInvoice' &&
+                    isLoading?.id === item.id
+                  "
                   class="ma-2"
                   color="lime-accent-3"
                   icon="mdi-email-fast"
@@ -102,7 +105,10 @@
                 <v-btn
                   v-bind="props"
                   :disabled="item.status !== 'sent'"
-                  :loading="isLoading === 'markInvoicePaid' && loadingId === item.id"
+                  :loading="
+                    isLoading?.action === 'markInvoicePaid' &&
+                    isLoading?.id === item.id
+                  "
                   class="ma-2"
                   color="green"
                   icon="mdi-currency-eur"
@@ -115,7 +121,10 @@
                 <v-btn
                   v-bind="props"
                   :disabled="item.internetmarke"
-                  :loading="isLoading === 'purchaseInternetmarke'"
+                  :loading="
+                    isLoading?.action === 'purchaseInternetmarke' &&
+                    isLoading?.id === item.id
+                  "
                   class="ma-2"
                   color="blue-darken-1"
                   icon="mdi-postage-stamp"
@@ -128,7 +137,10 @@
                 <v-btn
                   v-bind="props"
                   :disabled="!item.internetmarke"
-                  :loading="isLoading === 'printInternetmarke'"
+                  :loading="
+                    isLoading?.action === 'printInternetmarke' &&
+                    isLoading?.id === item.invoiceNumber
+                  "
                   class="ma-2"
                   color="purple"
                   icon="mdi-printer"
@@ -141,7 +153,10 @@
                 <v-btn
                   v-bind="props"
                   :disabled="item.status != 'paid'"
-                  :loading="isLoading === 'printInvoice'"
+                  :loading="
+                    isLoading?.action === 'printInvoice' &&
+                    isLoading?.id === item.id
+                  "
                   class="ma-2"
                   color="red"
                   icon="mdi-printer-outline"
@@ -162,7 +177,7 @@ import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
 
 const appStore = useAppStore();
-const { isLoading, loadingId, invoices } = storeToRefs(appStore);
+const { isLoading, invoices } = storeToRefs(appStore);
 const {
   printInternetmarke,
   purchaseInternetmarke,
@@ -207,7 +222,6 @@ const headers = [
   },
 ] as const;
 
-// Fetch data when the component loads
 onMounted(() => {
   fetchInvoices();
 });
