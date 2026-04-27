@@ -1,5 +1,16 @@
 <template>
   <v-row>
+    <v-row class="mb-4">
+      <v-col v-for="state in allStates" :key="state" cols="auto">
+        <v-switch
+          v-model="selectedStates"
+          :label="state"
+          :value="state"
+          color="primary"
+          hide-details
+        ></v-switch>
+      </v-col>
+    </v-row>
     <v-col cols="12">
       <v-card>
         <v-data-table
@@ -137,6 +148,10 @@ const status_colors = {
   paid: "#62efbd",
   voided: "#1c212b"
 } as const;
+
+const allStates = Object.keys(status_colors);
+
+const selectedStates = ref([...allStates]);
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },
