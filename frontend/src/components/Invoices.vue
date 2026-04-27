@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-row class="mb-4">
-      <v-col v-for="(state, color) in status_colors" :key="state" cols="auto">
+      <v-col v-for="(color, state) in status_colors" :key="state" cols="auto">
         <v-switch
           v-model="selectedStates"
           :label="state"
