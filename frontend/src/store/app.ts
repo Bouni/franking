@@ -92,7 +92,7 @@ export const useAppStore = defineStore("app", () => {
         10,
       );
     } finally {
-      loadingId.value = null;
+      isLoading.value = null;
     }
   }
 
