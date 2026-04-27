@@ -1,12 +1,12 @@
 <template>
   <v-row>
     <v-row class="mb-4">
-      <v-col v-for="state in allStates" :key="state" cols="auto">
+      <v-col v-for="(state, color) in status_colors" :key="state" cols="auto">
         <v-switch
           v-model="selectedStates"
           :label="state"
           :value="state"
-          color="primary"
+          :color="color"
           hide-details
         ></v-switch>
       </v-col>
@@ -149,9 +149,7 @@ const status_colors = {
   voided: "#1c212b"
 } as const;
 
-const allStates = Object.keys(status_colors);
-
-const selectedStates = ref([...allStates]);
+const selectedStates = ref([...Object.keys(status_colors)]);
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },
