@@ -149,7 +149,7 @@ const status_colors = {
   voided: "#1c212b"
 } as const;
 
-const selectedStates = ref(Object.keys(status_colors));
+const selectedStates = ref(["draft", "sent", "paid"]);
 
 const filteredInvoices = computed(() => {
   return invoices.value.filter(item => selectedStates.value.includes(item.status))
