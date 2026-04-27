@@ -15,7 +15,7 @@
       <v-card>
         <v-data-table
           :headers="headers"
-          :items="invoices"
+          :items="filteredInvoices"
           :loading="isLoading === 'fetchInvoices'"
         >
           <template v-slot:loading>
@@ -149,7 +149,11 @@ const status_colors = {
   voided: "#1c212b"
 } as const;
 
-const selectedStates = ref([...Object.keys(status_colors)]);
+const selectedStates = ref(Object.keys(status_colors));
+
+const filteredInvoices = computed(() => {
+  return invoices.value.filter(item => selectedStates.value.includes(item.status))
+})
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },
