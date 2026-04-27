@@ -128,7 +128,7 @@
 <script setup lang="ts">
 import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
-import { onMounted, computed } from "vue";
+import { onMounted, computed, ref } from "vue";
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
