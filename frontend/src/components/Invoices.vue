@@ -10,13 +10,37 @@
           hide-details
         ></v-switch>
       </v-col>
+      <v-col>
+        <v-btn color="primary" class="px-4">
+          <img
+            src="@/assets/Sparkasse.svg"
+            width="20"
+            height="20"
+            class="mr-2"
+            alt=""
+          />
+
+          <span class="mx-1">Update</span>
+
+          <img
+            src="@/assets/PayPal.svg"
+            width="20"
+            height="20"
+            class="ml-2"
+            alt=""
+          />
+        </v-btn>
+      </v-col>
     </v-row>
     <v-col cols="12">
       <v-card>
         <v-data-table
           :headers="headers"
           :items="filteredInvoices"
-          :loading="isLoading === 'fetchInvoices' || (isLoading === false && invoices.length === 0)"
+          :loading="
+            isLoading === 'fetchInvoices' ||
+            (isLoading === false && invoices.length === 0)
+          "
         >
           <template v-slot:loading>
             <v-skeleton-loader type="table-row@10"></v-skeleton-loader>
@@ -25,7 +49,11 @@
             {{ value.toFixed(2) }} €
           </template>
           <template #item.status="{ value }">
-            <v-chip size="small" :color="status_colors[value as keyof typeof status_colors]" variant="flat">
+            <v-chip
+              size="small"
+              :color="status_colors[value as keyof typeof status_colors]"
+              variant="flat"
+            >
               {{ value }}
             </v-chip>
           </template>
@@ -146,14 +174,16 @@ const status_colors = {
   draft: "#242933",
   sent: "#28ebff",
   paid: "#62efbd",
-  voided: "#1c212b"
+  voided: "#1c212b",
 } as const;
 
 const selectedStates = ref(["draft", "sent", "paid"]);
 
 const filteredInvoices = computed(() => {
-  return invoices.value.filter(item => selectedStates.value.includes(item.status))
-})
+  return invoices.value.filter((item) =>
+    selectedStates.value.includes(item.status),
+  );
+});
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },
@@ -170,7 +200,7 @@ const headers = [
     key: "actions",
     align: "center",
     sortable: false,
-  }
+  },
 ] as const;
 
 // Fetch data when the component loads
