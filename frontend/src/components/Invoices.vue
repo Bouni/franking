@@ -15,6 +15,7 @@
           color="primary"
           class="px-4 mt-3 ml-5"
           :loading="isLoading === 'updatePayments'"
+          @click="updatePayments()"
         >
           <img
             src="@/assets/Sparkasse.svg"
@@ -207,11 +208,6 @@ const headers = [
     sortable: false,
   },
 ] as const;
-
-const handleUpdatePayments = () => {
-  const response = updatePayments();
-
-}
 
 // Fetch data when the component loads
 onMounted(() => {
