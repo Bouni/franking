@@ -1,5 +1,3 @@
-loadingId0;
-isLoading.value = false0;
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
@@ -9,7 +7,15 @@ import "toastify-js/src/toastify.css";
 export const useAppStore = defineStore("app", () => {
   interface LoadingState {
     id: number | string;
-    action: "markPaid" | "fetchBalance"; // | 'send' | 'print' | 'delete' | 'markPaid';
+    action:
+      | "fetchBalance"
+      | "fetchInvoices"
+      | "markInvoicePaid"
+      | "printInvoice"
+      | "sendInvoice"
+      | "printInternetmarke"
+      | "purchaseInternetmarke"
+      | "updatePayments";
   }
 
   const internetmarke = ref({ balance: 0.0 });
@@ -35,13 +41,16 @@ export const useAppStore = defineStore("app", () => {
 
   async function fetchBalance() {
     isLoading.value = { id: "", action: "fetchBalance" };
-    error.value = null;
 
     try {
       const response = await api.get("/internetmarke/balance");
       internetmarke.value = response.data;
     } catch (err: any) {
-      error.value = err.message || "Failed to fetch balance";
+      showToast(
+        `Error fetching Balance: ${err.message || "Error fetching Balance"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = null;
     }
@@ -49,13 +58,16 @@ export const useAppStore = defineStore("app", () => {
 
   async function fetchInvoices() {
     isLoading.value = { id: "", action: "fetchInvoices" };
-    error.value = null;
 
     try {
       const response = await api.get("/invoices");
       invoices.value = response.data.invoices;
     } catch (err: any) {
-      error.value = err.message || "Failed to fetch invoices";
+      showToast(
+        `Error fetching Invoices: ${err.message || "Error fetching Invoices"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = null;
     }
@@ -63,19 +75,22 @@ export const useAppStore = defineStore("app", () => {
 
   async function markInvoicePaid(invoice_id: string) {
     isLoading.value = { id: invoice_id, action: "markInvoicePaid" };
-    error.value = null;
 
     try {
-      await sleep(3000);
-      // await api.get(`/invoices/${invoice_id}/paid`);
-      // const invoice = invoices.value.find((inv) => inv.id === invoice_id);
-      // if (invoice) {
-      //   invoice.status = "paid";
-      // } else {
-      //   console.error("Invoice not found");
-      // }
+      await api.get(`/invoices/${invoice_id}/paid`);
+      const invoice = invoices.value.find((inv) => inv.id === invoice_id);
+      if (invoice) {
+        invoice.status = "paid";
+        showToast("Successfully marked Invoice as paid!", "#62efbd", 3);
+      } else {
+        showToast("Invoice not found", "#D32F2F", 10);
+      }
     } catch (err: any) {
-      error.value = err.message || "Failed to mark invoice paid";
+      showToast(
+        `Error marking Invoice as paid: ${err.message || "Error marking Invoice as paid"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       loadingId.value = null;
     }
@@ -83,12 +98,16 @@ export const useAppStore = defineStore("app", () => {
 
   async function printInvoice(invoice_id: string) {
     isLoading.value = { id: invoice_id, action: "printInvoice" };
-    error.value = null;
 
     try {
       await api.post(`/invoices/print`, { invoice_id: invoice_id });
+      showToast("Successfully printed Invoice!", "#62efbd", 3);
     } catch (err: any) {
-      error.value = err.message || "Failed to print invoice";
+      showToast(
+        `Error printing Invoice: ${err.message || "Error printing Invoice"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = null;
     }
@@ -96,18 +115,22 @@ export const useAppStore = defineStore("app", () => {
 
   async function sendInvoice(invoice_id: string) {
     isLoading.value = { id: invoice_id, action: "sendInvoice" };
-    error.value = null;
 
     try {
       await api.post(`/invoices/email`, { invoice_id: invoice_id });
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
         invoice.status = "sent";
+        showToast("Successfully sent Invoice!", "#62efbd", 3);
       } else {
-        console.error("Invoice not found");
+        showToast("Invoice not found", "#D32F2F", 10);
       }
     } catch (err: any) {
-      error.value = err.message || "Failed to send invoice";
+      showToast(
+        `Error sending Invoice: ${err.message || "Error sending Invoice"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = null;
     }
@@ -115,14 +138,17 @@ export const useAppStore = defineStore("app", () => {
 
   async function printInternetmarke(invoice_number: string) {
     isLoading.value = { id: invoice_id, action: "printInternetmarke" };
-    error.value = null;
-
     try {
       const response = await api.post("/internetmarke/print", {
         invoice_number: invoice_number,
       });
+      showToast("Internetmarke successfully printed!", "#62efbd", 3);
     } catch (err: any) {
-      error.value = err.message || "Failed to print Internetmarke";
+      showToast(
+        `Error printing Internetmarke: ${err.message || "Error printing Internetmarke"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = null;
     }
@@ -130,7 +156,6 @@ export const useAppStore = defineStore("app", () => {
 
   async function purchaseInternetmarke(invoice_id: string) {
     isLoading.value = { id: invoice_id, action: "purchaseInternetmarke" };
-    error.value = null;
 
     try {
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
@@ -141,13 +166,18 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.post("/internetmarke/purchase", data);
       if (invoice) {
         invoice.internetmarke = true;
+        showToast("Internetmarke successfully purchased!", "#62efbd", 3);
       } else {
-        console.error("Invoice not found");
+        showToast("Invoice not found", "#D32F2F", 10);
       }
       const response2 = await api.get("/internetmarke/balance");
       internetmarke.value = response2.data;
     } catch (err: any) {
-      error.value = err.message || "Failed to purchase Internetmarke";
+      showToast(
+        `Error purchasing Internetmarke: ${err.message || "Error purchasing Internetmarke"}`,
+        "#D32F2F",
+        10,
+      );
     } finally {
       isLoading.value = null;
     }
@@ -155,7 +185,6 @@ export const useAppStore = defineStore("app", () => {
 
   async function updatePayments() {
     isLoading.value = { id: "", action: "updatePayments" };
-    error.value = null;
 
     try {
       const response = await api.get("/payments/check");
@@ -168,7 +197,7 @@ export const useAppStore = defineStore("app", () => {
       }
     } catch (err: any) {
       showToast(
-        `Error updating payments: ${err.msg || "Error updating payments"}`,
+        `Error updating payments: ${err.message || "Error updating payments"}`,
         "#D32F2F",
         10,
       );
