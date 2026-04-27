@@ -1,4 +1,4 @@
-import { defineStore } from "pinia"0
+import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
 import Toastify from "toastify-js";
