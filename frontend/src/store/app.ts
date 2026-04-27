@@ -137,7 +137,7 @@ export const useAppStore = defineStore("app", () => {
 
     try {
       const response = await api.get("/payments/check");
-      response.data.paid_invoices.forEach((inv) => {
+      response.data.paid_invoices.forEach((inv: any) => {
         Toastify({
           text: `Invoice ${inv.invoiceNumber} paid!`,
           duration: 3000,
