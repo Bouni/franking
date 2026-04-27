@@ -150,19 +150,17 @@ export const useAppStore = defineStore("app", () => {
           }).showToast();
         });
       } else {
-        response.data.paid_invoices.forEach((inv: any) => {
-          Toastify({
-            text: "No new paid invoices",
-            duration: 3000,
-            gravity: "top",
-            position: "right",
-            style: {
-              background: "#62efbd", // Your 'paid' color
-              color: "#000",
-            },
-          }).showToast();
+        Toastify({
+          text: "No new paid invoices",
+          duration: 3000,
+          gravity: "top",
+          position: "right",
+          style: {
+            background: "#62efbd", // Your 'paid' color
+            color: "#000",
+          },
+        }).showToast();
       }
-
     } catch (err: any) {
       error.value = err.message || "Failed to print Internetmarke";
     } finally {
