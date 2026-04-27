@@ -16,7 +16,7 @@
         <v-data-table
           :headers="headers"
           :items="filteredInvoices"
-          :loading="isLoading === 'fetchInvoices'"
+          :loading="isLoading === 'fetchInvoices' || (isLoading === false && invoices.length === 0)"
         >
           <template v-slot:loading>
             <v-skeleton-loader type="table-row@10"></v-skeleton-loader>
