@@ -29,7 +29,7 @@ export const useAppStore = defineStore("app", () => {
   function showToast(text: string, color: string, duration: number) {
     Toastify({
       text: text,
-      duration: duration,
+      duration: duration * 100,
       gravity: "bottom",
       position: "center",
       style: {
