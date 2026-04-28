@@ -42,9 +42,15 @@ async def check_payments():
     t1 = await anyio.to_thread.run_sync(pp.fetch_transactions)
     t2 = await anyio.to_thread.run_sync(spk.fetch_transactions)
 
-    paid_numbers = {
-        str(t.get("invoice")) for t in (t1 + t2) if t.get("invoice")
-    }
+    payments_map = {}
+    
+    for t in t1:
+        if inv := t.get("invoice"):
+            payments_map[str(inv)] = "PayPal"
+            
+    for t in t2:
+        if inv := t.get("invoice"):
+            payments_map[str(inv)] = "Bank Transfer"
 
     async with await Invio.create() as invio:
         paid_invoices = []
@@ -54,10 +60,11 @@ async def check_payments():
             if i.get("status") == "sent":
                 inv_num = str(i.get("invoiceNumber"))
 
-                if inv_num in paid_numbers:
-                    print(f"Match found: {inv_num}")
-                    await invio.set_status_paid(i.get("id"))
-                    paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber")})
+                if inv_num in payments_map:
+                    method = payments_map[inv_num]
+                    print(f"Match found: {inv_num} via {method}")
+                    await invio.set_status_paid(i.get("id"), method)
+                    paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber"), "method": method})
                 else:
                     print(f"No payment seen for: {inv_num}")
 

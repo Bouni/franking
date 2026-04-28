@@ -64,8 +64,8 @@ class Invio:
         logging.info(response.json())
         return response.json()
     
-    async def set_status_paid(self, invoice_id: str) -> dict:
-        response = await self.client.put(f"/invoices/{invoice_id}", json={"status": "paid"})
+    async def set_status_paid(self, invoice_id: str, method: str) -> dict:
+        response = await self.client.put(f"/invoices/{invoice_id}", json={"status": "paid", "paymentMethod": method})
         response.raise_for_status()
         return response.json()
 
