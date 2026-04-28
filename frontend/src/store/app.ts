@@ -221,7 +221,6 @@ export const useAppStore = defineStore("app", () => {
   return {
     internetmarke,
     invoices,
-    error,
     isLoading,
     fetchBalance,
     fetchInvoices,
