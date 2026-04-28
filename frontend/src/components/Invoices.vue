@@ -28,13 +28,7 @@
             alt=""
           />
           <span class="mx-1">Update</span>
-          <img
-            :src="paypalIcon"
-            width="20"
-            height="20"
-            class="ml-2"
-            alt=""
-          />
+          <img :src="paypalIcon" width="20" height="20" class="ml-2" alt="" />
         </v-btn>
       </v-col>
     </v-row>
@@ -61,17 +55,15 @@
               variant="flat"
             >
               {{ item.status }}
+              <template v-slot:append>
+                <v-img
+                  v-if="getPaymentMethod(item)"
+                  width="16"
+                  :src="getPaymentMethod(item) ? paypalIcon : sparkasseIcon"
+                  class="ml-2"
+                ></v-img>
+              </template>
             </v-chip>
-
-              <v-img v-if="item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod ?? null"
-                width="16"
-                height="16"
-                :src="
-                  item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod == 'PayPal'
-                    ? paypalIcon 
-                    : sparkasseIcon 
-                "
-              ></v-img>
           </template>
           <template #item.checks="{ item }">
             <v-icon
@@ -159,8 +151,8 @@ import ActionButton from "@/components/ActionButton.vue";
 import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
-import paypalIcon from '@/assets/PayPal.svg';
-import sparkasseIcon from '@/assets/Sparkasse.svg';
+import paypalIcon from "@/assets/PayPal.svg";
+import sparkasseIcon from "@/assets/Sparkasse.svg";
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
@@ -192,7 +184,10 @@ const filteredInvoices = computed(() => {
   );
 });
 
-
+const getPaymentMethod = (item: any) => {
+  return item.statusHistory.find((entry: any) => entry.paymentMethod)
+    ?.paymentMethod;
+};
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },
