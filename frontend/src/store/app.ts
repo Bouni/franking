@@ -202,11 +202,7 @@ export const useAppStore = defineStore("app", () => {
       if (response.data.paid > 0) {
         response.data.paid_invoices.forEach((inv: any) => {
           setInvoiceStatus(inv.invoiceNumber, "paid", inv.method);
-          invoices.showToast(
-            `Invoice ${inv.invoiceNumber} paid!`,
-            "#8ac926",
-            10,
-          );
+          showToast(`Invoice ${inv.invoiceNumber} paid!`, "#8ac926", 10);
         });
       } else {
         showToast("No new paid invoices!", "#8ac926", 10);
