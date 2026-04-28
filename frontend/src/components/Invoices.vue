@@ -63,11 +63,11 @@
               {{ item.status }}
             </v-chip>
 
-            <v-avatar v-if="item.paymentMethod">
+            <v-avatar v-if="item.statusHistory.find(entry => entry.paymentMethod)?.paymentMethod ?? null">
               <v-img
                 alt="John"
                 :src="
-                  item.paymentMethod == 'PayPal'
+                  item.statusHistory.find(entry => entry.paymentMethod)?.paymentMethod == 'PayPal'
                     ? '@/assets/PayPal.svg'
                     : '@/assets/Sparkasse.svg'
                 "
