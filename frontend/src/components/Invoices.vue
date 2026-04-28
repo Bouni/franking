@@ -60,7 +60,7 @@
               :color="status_colors[item.status as keyof typeof status_colors]"
               variant="flat"
             >
-              {{ value }}
+              {{ item.status }}
             </v-chip>
 
             <v-avatar v-if="item.paymentMethod">
