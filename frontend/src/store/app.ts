@@ -206,6 +206,10 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
+  async function dummy() {
+    showToast("Dummy!", "#551188", 10);
+  }
+  
   return {
     internetmarke,
     invoices,
@@ -219,5 +223,6 @@ export const useAppStore = defineStore("app", () => {
     printInvoice,
     sendInvoice,
     updatePayments,
+    dummy
   };
 });

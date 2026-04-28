@@ -34,6 +34,9 @@
           />
         </v-btn>
       </v-col>
+      <v-col>
+        <v-btn @click="dummy()">Dummy</v-btn>
+      </v-col>
     </v-row>
     <v-col cols="12">
       <v-card>
@@ -186,6 +189,7 @@ const {
   printInvoice,
   sendInvoice,
   updatePayments,
+  dummy
 } = appStore;
 
 const status_colors = {
