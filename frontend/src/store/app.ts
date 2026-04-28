@@ -21,15 +21,18 @@ export const useAppStore = defineStore("app", () => {
   const internetmarke = ref({ balance: 0.0 });
   const invoices = ref<any[]>([]);
   const isLoading = ref<LoadingState | null>(null);
-  const error = ref<string | null>(null);
 
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  function setInvoiceStatus(invoiceNumber: string, newStatus: string, method: string) {
+  function setInvoiceStatus(
+    invoiceNumber: string,
+    newStatus: string,
+    method: string,
+  ) {
     invoices.value = invoices.value.map((inv) =>
       inv.invoice_number === invoiceNumber
-        ? { ...inv, status: newStatus, paymentMethod: method}
+        ? { ...inv, status: newStatus, paymentMethod: method }
         : inv,
     );
   }
@@ -198,7 +201,7 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.get("/payments/check");
       if (response.data.paid > 0) {
         response.data.paid_invoices.forEach((inv: any) => {
-          setInvoiceStatus(inv.invoiceNumber, "paid", inv.method)
+          setInvoiceStatus(inv.invoiceNumber, "paid", inv.method);
           invoices.showToast(
             `Invoice ${inv.invoiceNumber} paid!`,
             "#8ac926",
