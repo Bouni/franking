@@ -1,6 +1,9 @@
 <template>
   <v-row>
     <v-row class="mb-4">
+      <v-col>
+        <Internetmarke />
+      </v-col>
       <v-col v-for="(color, state) in status_colors" :key="state" cols="auto">
         <v-switch
           v-model="selectedStates"
@@ -84,86 +87,55 @@
             ></span>
           </template>
           <template #item.actions="{ item }">
-            <v-tooltip text="Send invoice as e-mail">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  :disabled="item.customer.email === ''"
-                  :loading="
-                    isLoading?.action === 'sendInvoice' &&
-                    isLoading?.id === item.id
-                  "
-                  class="ma-2"
-                  color="lime-accent-3"
-                  icon="mdi-email-fast"
-                  @click="sendInvoice(item.id)"
-                ></v-btn>
-              </template>
-            </v-tooltip>
-            <v-tooltip text="Mark as paid">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  :disabled="item.status !== 'sent'"
-                  :loading="
-                    isLoading?.action === 'markInvoicePaid' &&
-                    isLoading?.id === item.id
-                  "
-                  class="ma-2"
-                  color="green"
-                  icon="mdi-currency-eur"
-                  @click="markInvoicePaid(item.id)"
-                ></v-btn>
-              </template>
-            </v-tooltip>
-            <v-tooltip text="Purchase Internetmarke">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  :disabled="item.internetmarke"
-                  :loading="
-                    isLoading?.action === 'purchaseInternetmarke' &&
-                    isLoading?.id === item.id
-                  "
-                  class="ma-2"
-                  color="blue-darken-1"
-                  icon="mdi-postage-stamp"
-                  @click="purchaseInternetmarke(item.id)"
-                ></v-btn>
-              </template>
-            </v-tooltip>
-            <v-tooltip text="Print Internetmarke">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  :disabled="!item.internetmarke"
-                  :loading="
-                    isLoading?.action === 'printInternetmarke' &&
-                    isLoading?.id === item.invoiceNumber
-                  "
-                  class="ma-2"
-                  color="purple"
-                  icon="mdi-printer"
-                  @click="printInternetmarke(item.invoiceNumber)"
-                ></v-btn>
-              </template>
-            </v-tooltip>
-            <v-tooltip text="Print invoice">
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  :disabled="item.status != 'paid'"
-                  :loading="
-                    isLoading?.action === 'printInvoice' &&
-                    isLoading?.id === item.id
-                  "
-                  class="ma-2"
-                  color="red"
-                  icon="mdi-printer-outline"
-                  @click="printInvoice(item.id)"
-                ></v-btn>
-              </template>
-            </v-tooltip>
+            <ActionButton
+              icon="mdi-email-fast"
+              color="lime-accent-3"
+              tooltip="Send invoice as e-mail"
+              action="sendInvoice"
+              :action-id="item.id"
+              :disabled="item.customer.email === ''"
+              @click="sendInvoice(item.id)"
+            />
+
+            <ActionButton
+              icon="mdi-currency-eur"
+              color="green"
+              tooltip="Mark as paid"
+              action="markInvoicePaid"
+              :action-id="item.id"
+              :disabled="item.status !== 'sent'"
+              @click="markInvoicePaid(item.id)"
+            />
+
+            <ActionButton
+              icon="mdi-postage-stamp"
+              color="blue-darken-1"
+              tooltip="Purchase Internetmarke"
+              action="purchaseInternetmarke"
+              :action-id="item.id"
+              :disabled="item.internetmarke"
+              @click="purchaseInternetmarke(item.id)"
+            />
+
+            <ActionButton
+              icon="mdi-printer"
+              color="purple"
+              tooltip="Print Internetmarke"
+              action="printInternetmarke"
+              :action-id="item.invoiceNumber"
+              :disabled="!item.internetmarke"
+              @click="printInternetmarke(item.invoiceNumber)"
+            />
+
+            <ActionButton
+              icon="mdi-printer-outline"
+              color="red"
+              tooltip="Print invoice"
+              action="printInvoice"
+              :action-id="item.id"
+              :disabled="item.status !== 'paid'"
+              @click="printInvoice(item.id)"
+            />
           </template>
         </v-data-table>
       </v-card>
@@ -172,6 +144,8 @@
 </template>
 
 <script setup lang="ts">
+import Internetmarke from "@/components/Internetmarke.vue";
+import ActionButton from "@/components/ActionButton.vue";
 import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
@@ -185,7 +159,7 @@ const {
   fetchInvoices,
   printInvoice,
   sendInvoice,
-  updatePayments
+  updatePayments,
 } = appStore;
 
 const status_colors = {

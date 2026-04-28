@@ -5,7 +5,6 @@
         <v-app-bar>
           <v-app-bar-title>Franking</v-app-bar-title>
         </v-app-bar>
-        <Internetmarke />
         <Invoices />
       </v-container>
     </v-main>
@@ -13,6 +12,5 @@
 </template>
 
 <script lang="ts" setup>
-import Internetmarke from "@/components/Internetmarke.vue";
 import Invoices from "@/components/Invoices.vue";
 </script>
