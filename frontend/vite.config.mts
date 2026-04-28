@@ -10,7 +10,6 @@ export default defineConfig({
     Vue({
       template: { transformAssetUrls },
     }),
-    // https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin#readme
     Vuetify({
       autoImport: true,
       styles: {
@@ -22,8 +21,10 @@ export default defineConfig({
         families: [
           {
             name: 'Roboto',
-            weights: [100, 300, 400, 500, 700, 900],
-            styles: ['normal', 'italic'],
+            // weights: [100, 300, 400, 500, 700, 900],
+            // styles: ['normal', 'italic'],
+            weights: [400],
+            styles: ['normal'],
           },
         ],
       },
@@ -31,18 +32,6 @@ export default defineConfig({
   ],
   server: {
     port: 3001,
-		//allowedHosts: ['*'],
-    // proxy: {
-    //   // Whenever you call '/api' in your code...
-    //   '/api': {
-    //     // ...Vite redirects it to this host:
-    //     target: 'http://horus.home:8567', 
-    //     changeOrigin: true,
-    //     secure: false,
-    //     // Optional: remove /api from the start before sending to backend
-    //     // rewrite: (path) => path.replace(/^\/api/, ''),
-    //   },
-    // },
   },
   define: { 'process.env': {} },
   resolve: {
