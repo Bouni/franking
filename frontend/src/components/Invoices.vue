@@ -62,6 +62,17 @@
             >
               {{ value }}
             </v-chip>
+
+            <v-avatar v-if="item.paymentMethod">
+              <v-img
+                alt="John"
+                :src="
+                  item.paymentMethod == 'PayPal'
+                    ? '@/assets/PayPal.svg'
+                    : '@/assets/Sparkasse.svg'
+                "
+              ></v-img>
+            </v-avatar>
           </template>
           <template #item.checks="{ item }">
             <v-icon
