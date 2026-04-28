@@ -21,7 +21,7 @@
           @click="updatePayments()"
         >
           <img
-            src="@/assets/Sparkasse.svg"
+            :src="sparkasseIcon"
             width="20"
             height="20"
             class="mr-2"
@@ -29,7 +29,7 @@
           />
           <span class="mx-1">Update</span>
           <img
-            src="@/assets/PayPal.svg"
+            :src="paypalIcon"
             width="20"
             height="20"
             class="ml-2"
@@ -68,8 +68,8 @@
                 alt="John"
                 :src="
                   item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod == 'PayPal'
-                    ? '@/assets/PayPal.svg'
-                    : '@/assets/Sparkasse.svg'
+                    ? paypalIcon 
+                    : sparkasseIcon 
                 "
               ></v-img>
             </v-avatar>
@@ -160,6 +160,8 @@ import ActionButton from "@/components/ActionButton.vue";
 import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
+import paypalIcon from '@/assets/PayPal.svg';
+import sparkasseIcon from '@/assets/Sparkasse.svg';
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
@@ -190,6 +192,8 @@ const filteredInvoices = computed(() => {
     selectedStates.value.includes(item.status),
   );
 });
+
+
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },
