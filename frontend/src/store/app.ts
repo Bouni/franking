@@ -1,5 +1,3 @@
-        showToast("No new paid invoices!", "#62efbd", 10)0
-        showToast("No new paid invoices!", "#62efbd", 10)0
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
@@ -211,7 +209,7 @@ export const useAppStore = defineStore("app", () => {
   async function dummy() {
     showToast("Dummy!", "#551188", 10);
   }
-  
+
   return {
     internetmarke,
     invoices,
@@ -225,6 +223,6 @@ export const useAppStore = defineStore("app", () => {
     printInvoice,
     sendInvoice,
     updatePayments,
-    dummy
+    dummy,
   };
 });
