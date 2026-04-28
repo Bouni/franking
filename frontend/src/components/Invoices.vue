@@ -65,7 +65,8 @@
 
             <v-avatar v-if="item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod ?? null">
               <v-img
-                alt="John"
+                width="20"
+                height="20"
                 :src="
                   item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod == 'PayPal'
                     ? paypalIcon 
