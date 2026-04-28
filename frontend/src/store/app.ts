@@ -26,6 +26,14 @@ export const useAppStore = defineStore("app", () => {
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
+  function setInvoiceStatus(invoiceNumber: string, newStatus: string, method: string) {
+    invoices.value = invoices.value.map((inv) =>
+      inv.invoice_number === invoiceNumber
+        ? { ...inv, status: newStatus, paymentMethod: method}
+        : inv,
+    );
+  }
+
   function showToast(text: string, color: string, duration: number) {
     Toastify({
       text: text,
@@ -190,7 +198,12 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.get("/payments/check");
       if (response.data.paid > 0) {
         response.data.paid_invoices.forEach((inv: any) => {
-          showToast(`Invoice ${inv.invoiceNumber} paid!`, "#8ac926", 10);
+          setInvoiceStatus(inv.invoiceNumber, "paid", inv.method)
+          invoices.showToast(
+            `Invoice ${inv.invoiceNumber} paid!`,
+            "#8ac926",
+            10,
+          );
         });
       } else {
         showToast("No new paid invoices!", "#8ac926", 10);
