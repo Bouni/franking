@@ -54,10 +54,10 @@
           <template #item.subtotal="{ value }">
             {{ value.toFixed(2) }} €
           </template>
-          <template #item.status="{ value }">
+          <template #item.status="{ item }">
             <v-chip
               size="small"
-              :color="status_colors[value as keyof typeof status_colors]"
+              :color="status_colors[item.status as keyof typeof status_colors]"
               variant="flat"
             >
               {{ value }}
