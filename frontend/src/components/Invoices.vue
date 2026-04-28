@@ -163,11 +163,11 @@ const {
 } = appStore;
 
 const status_colors = {
-  complete: "#ff7d5d",
-  draft: "#242933",
-  sent: "#28ebff",
-  paid: "#62efbd",
-  voided: "#1c212b",
+  complete: "#6a4c93",
+  draft: "#ff595e",
+  sent: "#ffca3a",
+  paid: "#8ac926",
+  voided: "#8da9c4",
 } as const;
 
 const selectedStates = ref(["draft", "sent", "paid"]);

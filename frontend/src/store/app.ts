@@ -48,7 +48,7 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       showToast(
         `Error fetching Balance: ${err.message || "Error fetching Balance"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -65,7 +65,7 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       showToast(
         `Error fetching Invoices: ${err.message || "Error fetching Invoices"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -81,14 +81,14 @@ export const useAppStore = defineStore("app", () => {
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
         invoice.status = "paid";
-        showToast("Successfully marked Invoice as paid!", "#62efbd", 3);
+        showToast("Successfully marked Invoice as paid!", "#8ac926", 3);
       } else {
-        showToast("Invoice not found", "#D32F2F", 10);
+        showToast("Invoice not found", "#ff595e", 10);
       }
     } catch (err: any) {
       showToast(
         `Error marking Invoice as paid: ${err.message || "Error marking Invoice as paid"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -101,11 +101,11 @@ export const useAppStore = defineStore("app", () => {
 
     try {
       await api.post(`/invoices/print`, { invoice_id: invoice_id });
-      showToast("Successfully printed Invoice!", "#62efbd", 3);
+      showToast("Successfully printed Invoice!", "#8ac926", 3);
     } catch (err: any) {
       showToast(
         `Error printing Invoice: ${err.message || "Error printing Invoice"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -121,14 +121,14 @@ export const useAppStore = defineStore("app", () => {
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
         invoice.status = "sent";
-        showToast("Successfully sent Invoice!", "#62efbd", 3);
+        showToast("Successfully sent Invoice!", "#8ac926", 3);
       } else {
-        showToast("Invoice not found", "#D32F2F", 10);
+        showToast("Invoice not found", "#ff595e", 10);
       }
     } catch (err: any) {
       showToast(
         `Error sending Invoice: ${err.message || "Error sending Invoice"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -142,11 +142,11 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.post("/internetmarke/print", {
         invoice_number: invoice_number,
       });
-      showToast("Internetmarke successfully printed!", "#62efbd", 3);
+      showToast("Internetmarke successfully printed!", "#8ac926", 3);
     } catch (err: any) {
       showToast(
         `Error printing Internetmarke: ${err.message || "Error printing Internetmarke"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -166,16 +166,16 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.post("/internetmarke/purchase", data);
       if (invoice) {
         invoice.internetmarke = true;
-        showToast("Internetmarke successfully purchased!", "#62efbd", 3);
+        showToast("Internetmarke successfully purchased!", "#8ac926", 3);
       } else {
-        showToast("Invoice not found", "#D32F2F", 10);
+        showToast("Invoice not found", "#ff595e", 10);
       }
       const response2 = await api.get("/internetmarke/balance");
       internetmarke.value = response2.data;
     } catch (err: any) {
       showToast(
         `Error purchasing Internetmarke: ${err.message || "Error purchasing Internetmarke"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
@@ -190,15 +190,15 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.get("/payments/check");
       if (response.data.paid > 0) {
         response.data.paid_invoices.forEach((inv: any) => {
-          showToast(`Invoice ${inv.invoiceNumber} paid!`, "#62efbd", 10);
+          showToast(`Invoice ${inv.invoiceNumber} paid!`, "#8ac926", 10);
         });
       } else {
-        showToast("No new paid invoices!", "#62efbd", 10);
+        showToast("No new paid invoices!", "#8ac926", 10);
       }
     } catch (err: any) {
       showToast(
         `Error updating payments: ${err.message || "Error updating payments"}`,
-        "#D32F2F",
+        "#ff595e",
         10,
       );
     } finally {
