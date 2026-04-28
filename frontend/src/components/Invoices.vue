@@ -162,9 +162,11 @@ const {
   updatePayments,
 } = appStore;
 
+// colors from https://coolors.co/palette/ff595e-ffca3a-8ac926-1982c4-6a4c93
+
 const status_colors = {
-  complete: "#6a4c93",
-  draft: "#ff595e",
+  complete: "#7209b7",
+  draft: "#1982c4",
   sent: "#ffca3a",
   paid: "#8ac926",
   voided: "#8da9c4",
