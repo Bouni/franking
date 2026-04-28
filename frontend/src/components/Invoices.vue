@@ -63,17 +63,15 @@
               {{ item.status }}
             </v-chip>
 
-            <v-avatar v-if="item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod ?? null">
-              <v-img
-                width="20"
-                height="20"
+              <v-img v-if="item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod ?? null"
+                width="16"
+                height="16"
                 :src="
                   item.statusHistory.find((entry: any) => entry.paymentMethod)?.paymentMethod == 'PayPal'
                     ? paypalIcon 
                     : sparkasseIcon 
                 "
               ></v-img>
-            </v-avatar>
           </template>
           <template #item.checks="{ item }">
             <v-icon
