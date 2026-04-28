@@ -1,3 +1,5 @@
+        showToast("No new paid invoices!", "#62efbd", 10)0
+        showToast("No new paid invoices!", "#62efbd", 10)0
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
@@ -29,7 +31,7 @@ export const useAppStore = defineStore("app", () => {
   function showToast(text: string, color: string, duration: number) {
     Toastify({
       text: text,
-      duration: duration * 100,
+      duration: duration * 1000,
       gravity: "bottom",
       position: "center",
       style: {
