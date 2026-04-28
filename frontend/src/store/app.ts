@@ -4,20 +4,20 @@ import api from "@/plugins/axios";
 import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
 
-export const useAppStore = defineStore("app", () => {
-  interface LoadingState {
-    id: number | string;
-    action:
-      | "fetchBalance"
-      | "fetchInvoices"
-      | "markInvoicePaid"
-      | "printInvoice"
-      | "sendInvoice"
-      | "printInternetmarke"
-      | "purchaseInternetmarke"
-      | "updatePayments";
-  }
+export interface LoadingState {
+  id: number | string;
+  action:
+    | "fetchBalance"
+    | "fetchInvoices"
+    | "markInvoicePaid"
+    | "printInvoice"
+    | "sendInvoice"
+    | "printInternetmarke"
+    | "purchaseInternetmarke"
+    | "updatePayments";
+}
 
+export const useAppStore = defineStore("app", () => {
   const internetmarke = ref({ balance: 0.0 });
   const invoices = ref<any[]>([]);
   const isLoading = ref<LoadingState | null>(null);
