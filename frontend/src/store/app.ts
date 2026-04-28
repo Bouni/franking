@@ -192,8 +192,8 @@ export const useAppStore = defineStore("app", () => {
         response.data.paid_invoices.forEach((inv: any) => {
           showToast(`Invoice ${inv.invoiceNumber} paid!`, "#62efbd", 10);
         });
-        showToast("No new paid invoices!", "#62efbd", 10);
       } else {
+        showToast("No new paid invoices!", "#62efbd", 10);
       }
     } catch (err: any) {
       showToast(
@@ -204,10 +204,6 @@ export const useAppStore = defineStore("app", () => {
     } finally {
       isLoading.value = null;
     }
-  }
-
-  async function dummy() {
-    showToast("Dummy!", "#551188", 10);
   }
 
   return {
@@ -223,6 +219,5 @@ export const useAppStore = defineStore("app", () => {
     printInvoice,
     sendInvoice,
     updatePayments,
-    dummy,
   };
 });
