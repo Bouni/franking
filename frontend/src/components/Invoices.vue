@@ -208,7 +208,7 @@ const statusCounts = computed(() => {
     {} as Record<string, number>,
   );
 
-  items.value.forEach((item) => {
+  invoices.value.forEach((item) => {
     if (item.status in counts) {
       counts[item.status]++;
     }
