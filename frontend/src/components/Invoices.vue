@@ -59,7 +59,11 @@
                 <v-img
                   v-if="getPaymentMethod(item)"
                   width="16"
-                  :src="getPaymentMethod(item) ? sparkasseIcon : paypalIcon"
+                  :src="
+                    getPaymentMethod(item) == 'PayPal'
+                      ? paypalIcon
+                      : sparkasseIcon
+                  "
                   class="ml-2"
                 ></v-img>
               </template>
