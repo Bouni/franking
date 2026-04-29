@@ -166,7 +166,7 @@
               tooltip="Mark as complete"
               action="markInvoiceComplete"
               :action-id="item.id"
-              :disabled="item.status !== 'complete'"
+              :disabled="item.status !== 'paid'"
               @click="markInvoiceComplete(item.id)"
             />
           </template>
