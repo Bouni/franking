@@ -22,4 +22,5 @@ The tech stack:
  - [Vuetify](https://vuetifyjs.com/)
  - [python-inema](https://codeberg.org/gms/python-inema)
  - [brother_ql](https://github.com/pklaus/brother_ql)
+ - [python-fints](github.com/raphaelm/python-fints)
 
