@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import pprint
 import re
 import time
 
@@ -59,7 +60,7 @@ class Sparkasse:
             return r.group(0)
         return ""
 
-    def fetch_transactions(self):
+    def fetch_transactions(self, days: int = 30):
         with self.client:
             if isinstance(self.client.init_tan_response, NeedTANResponse):
                 if self.client.init_tan_response.decoupled:
@@ -80,7 +81,7 @@ class Sparkasse:
             )
             transactions = self.client.get_transactions(
                 account,
-                datetime.date.today() - datetime.timedelta(days=30),
+                datetime.date.today() - datetime.timedelta(days=days),
                 datetime.date.today(),
             )
 
@@ -94,13 +95,14 @@ class Sparkasse:
                                 transaction.data.get("purpose")
                             ),
                             "name": transaction.data.get("applicant_name"),
-                            "date": transaction.data.get("date"),
-                            "amount": transaction.data.get("amount", {}).amount,
+                            "date": transaction.data.get("date").isoformat(),
+                            "amount": float(transaction.data.get("amount", {}).amount),
                         }
                     )
 
             return transaction_data
 
+
 if __name__ == "__main__":
     spk = Sparkasse()
-    spk.fetch_transactions()
+    pprint.pprint(spk.fetch_transactions(90))
