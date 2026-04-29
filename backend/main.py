@@ -1,3 +1,4 @@
+#             id = uuid.uuid4(0
 import asyncio
 import logging
 import os
@@ -70,6 +71,19 @@ async def check_payments():
 
     return {"status": "success", "processed": len(raw_invoices), "paid": len(paid_invoices), "paid_invoices": paid_invoices}
 
+@app.get("/api/invoices/{invoice_id}")
+async def get_invoice(invoice_id: str):
+    async with await Invio.create() as invio:
+
+        invoice_data = await invio.get_invoice_data(invoice_id)
+        customer_data = await invio.get_customer_data(invoice_data.get("customerId"))
+
+        invoice_data["customer"] = customer_data
+
+        im = Path(LABEL_PATH) / f"{invoice_data.get('invoiceNumber')}.png"
+        invoice_data["internetmarke"] = im.is_file()
+
+        return {"invoice": invoice_data}
 
 @app.get("/api/invoices")
 async def invoices():
