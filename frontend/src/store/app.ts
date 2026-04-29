@@ -10,6 +10,7 @@ export interface LoadingState {
     | "fetchBalance"
     | "fetchInvoices"
     | "markInvoicePaid"
+    | "markInvoiceComplete"
     | "printInvoice"
     | "sendInvoice"
     | "printInternetmarke"
@@ -93,6 +94,29 @@ export const useAppStore = defineStore("app", () => {
     } catch (err: any) {
       showToast(
         `Error marking Invoice as paid: ${err.message || "Error marking Invoice as paid"}`,
+        "#ff595e",
+        10,
+      );
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
+  async function markInvoiceComplete(invoice_id: string) {
+    isLoading.value = { id: invoice_id, action: "markInvoiceComplete" };
+
+    try {
+      await api.get(`/invoices/${invoice_id}/complete`);
+      const invoice = invoices.value.find((inv) => inv.id === invoice_id);
+      if (invoice) {
+        invoice.status = "complete";
+        showToast("Successfully marked Invoice as complete!", "#8ac926", 3);
+      } else {
+        showToast("Invoice not found", "#ff595e", 10);
+      }
+    } catch (err: any) {
+      showToast(
+        `Error marking Invoice as complete: ${err.message || "Error marking Invoice as complete"}`,
         "#ff595e",
         10,
       );
@@ -219,6 +243,7 @@ export const useAppStore = defineStore("app", () => {
     fetchBalance,
     fetchInvoices,
     markInvoicePaid,
+    markInvoiceComplete,
     printInternetmarke,
     purchaseInternetmarke,
     printInvoice,

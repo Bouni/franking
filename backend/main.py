@@ -133,6 +133,13 @@ async def mark_invoice_paid(invoice_id):
     return JSONResponse({"success": True})
 
 
+@app.get("/api/invoices/{invoice_id}/complete")
+async def mark_invoice_complete(invoice_id):
+    async with await Invio.create() as invio:
+        await invio.set_status_complete(invoice_id)
+    return JSONResponse({"success": True})
+
+
 @app.post("/api/invoices/print")
 async def print_invoice(data: dict):
     async with await Invio.create() as invio:

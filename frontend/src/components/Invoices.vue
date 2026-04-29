@@ -159,6 +159,16 @@
               :disabled="item.status !== 'paid'"
               @click="printInvoice(item.id)"
             />
+
+            <ActionButton
+              icon="mdi-check"
+              color="lime-accent-3"
+              tooltip="Mark as complete"
+              action="markInvoiceComplete"
+              :action-id="item.id"
+              :disabled="item.status !== 'complete'"
+              @click="markInvoiceComplete(item.id)"
+            />
           </template>
         </v-data-table>
       </v-card>
@@ -181,6 +191,7 @@ const {
   printInternetmarke,
   purchaseInternetmarke,
   markInvoicePaid,
+  markInvoiceComplete,
   fetchInvoices,
   printInvoice,
   sendInvoice,
