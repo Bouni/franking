@@ -32,6 +32,23 @@
         </v-btn>
       </v-col>
     </v-row>
+
+    <v-col cols="12">
+      <v-card>
+        <v-card-text class="d-flex flex-wrap ga-2">
+          <v-chip
+            v-for="(color, status) in status_colors"
+            :key="status"
+            :color="color"
+            variant="flat"
+          >
+            <span class="text-capitalize">{{ status }}:</span>
+            <span class="ml-2">{{ statusCounts[status] }}</span>
+          </v-chip>
+        </v-card-text>
+      </v-card>
+    </v-col>
+
     <v-col cols="12">
       <v-card>
         <v-data-table
@@ -181,6 +198,24 @@ const status_colors = {
 } as const;
 
 const selectedStates = ref(["draft", "sent", "paid"]);
+
+const statusCounts = computed(() => {
+  const counts = Object.keys(status_colors).reduce(
+    (acc, status) => {
+      acc[status] = 0;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  items.value.forEach((item) => {
+    if (item.status in counts) {
+      counts[item.status]++;
+    }
+  });
+
+  return counts;
+});
 
 const filteredInvoices = computed(() => {
   return invoices.value.filter((item) =>
