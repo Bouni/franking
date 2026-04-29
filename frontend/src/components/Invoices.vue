@@ -1,10 +1,10 @@
 <template>
   <v-row>
     <v-row class="mb-4">
-      <v-col>
+      <v-col cols="2">
         <Internetmarke />
       </v-col>
-      <v-col v-for="(color, state) in status_colors" :key="state" cols="auto">
+      <v-col v-for="(color, state) in status_colors" :key="state" cols="4">
         <v-switch
           v-model="selectedStates"
           :label="state"
@@ -13,7 +13,7 @@
           hide-details
         ></v-switch>
       </v-col>
-      <v-col>
+      <v-col cols="2">
         <v-btn
           color="primary"
           class="px-4 mt-3 ml-5"
