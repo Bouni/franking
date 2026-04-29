@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import pprint
 from internetmarke import Internetmarke
 from invio import Invio
 from mail import Mail
@@ -44,11 +43,11 @@ async def check_payments():
     t2 = await anyio.to_thread.run_sync(spk.fetch_transactions)
 
     payments_map = {}
-    
+
     for t in t1:
         if inv := t.get("invoice"):
             payments_map[str(inv)] = "PayPal"
-            
+
     for t in t2:
         if inv := t.get("invoice"):
             payments_map[str(inv)] = "Bank Transfer"
@@ -66,16 +65,28 @@ async def check_payments():
                     print(f"Match found: {inv_num} via {method}")
                     await invio.set_status_paid(i.get("id"), method)
                     invoice_data = await invio.get_invoice_data(i.get("id"))
-                    paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber"), "method": method, "invoice_data": invoice_data})
+                    paid_invoices.append(
+                        {
+                            "id": i.get("id"),
+                            "invoiceNumber": i.get("invoiceNumber"),
+                            "method": method,
+                            "invoice_data": invoice_data,
+                        }
+                    )
                 else:
                     print(f"No payment seen for: {inv_num}")
 
-    return {"status": "success", "processed": len(raw_invoices), "paid": len(paid_invoices), "paid_invoices": paid_invoices}
+    return {
+        "status": "success",
+        "processed": len(raw_invoices),
+        "paid": len(paid_invoices),
+        "paid_invoices": paid_invoices,
+    }
+
 
 @app.get("/api/invoices/{invoice_id}")
 async def get_invoice(invoice_id: str):
     async with await Invio.create() as invio:
-
         invoice_data = await invio.get_invoice_data(invoice_id)
         customer_data = await invio.get_customer_data(invoice_data.get("customerId"))
 
@@ -85,6 +96,7 @@ async def get_invoice(invoice_id: str):
         invoice_data["internetmarke"] = im.is_file()
 
         return invoice_data
+
 
 @app.get("/api/invoices")
 async def invoices():

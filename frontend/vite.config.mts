@@ -1,8 +1,8 @@
-import { fileURLToPath, URL } from 'node:url'
-import Vue from '@vitejs/plugin-vue'
-import Fonts from 'unplugin-fonts/vite'
-import { defineConfig } from 'vite'
-import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import { fileURLToPath, URL } from "node:url";
+import Vue from "@vitejs/plugin-vue";
+import Fonts from "unplugin-fonts/vite";
+import { defineConfig } from "vite";
+import Vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,18 +13,18 @@ export default defineConfig({
     Vuetify({
       autoImport: true,
       styles: {
-        configFile: 'src/styles/settings.scss',
+        configFile: "src/styles/settings.scss",
       },
     }),
     Fonts({
       fontsource: {
         families: [
           {
-            name: 'Roboto',
+            name: "Roboto",
             // weights: [100, 300, 400, 500, 700, 900],
             // styles: ['normal', 'italic'],
             weights: [400],
-            styles: ['normal'],
+            styles: ["normal"],
           },
         ],
       },
@@ -33,19 +33,11 @@ export default defineConfig({
   server: {
     port: 3001,
   },
-  define: { 'process.env': {} },
+  define: { "process.env": {} },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('src', import.meta.url)),
+      "@": fileURLToPath(new URL("src", import.meta.url)),
     },
-    extensions: [
-      '.js',
-      '.json',
-      '.jsx',
-      '.mjs',
-      '.ts',
-      '.tsx',
-      '.vue',
-    ],
+    extensions: [".js", ".json", ".jsx", ".mjs", ".ts", ".tsx", ".vue"],
   },
-})
+});

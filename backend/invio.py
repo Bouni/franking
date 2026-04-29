@@ -1,6 +1,5 @@
 import logging
 import os
-import asyncio
 import httpx
 from dotenv import load_dotenv
 
@@ -19,8 +18,7 @@ class Invio:
         self.base_url = INVIO_URL
         # Initialize the client with the token already in the headers
         self.client = httpx.AsyncClient(
-            base_url=self.base_url, 
-            headers={"Authorization": f"Bearer {token}"}
+            base_url=self.base_url, headers={"Authorization": f"Bearer {token}"}
         )
 
     @classmethod
@@ -33,8 +31,9 @@ class Invio:
             )
             response.raise_for_status()
             token = response.json()["token"]
-        
+
         return cls(token)
+
     # def __init__(self):
     #     self.client = httpx.Client(base_url=INVIO_URL)
     #     self.client.headers.update({"Authorization": f"Bearer {self._get_token()}"})
@@ -59,13 +58,17 @@ class Invio:
         return response.json()
 
     async def set_status_sent(self, invoice_id: str) -> dict:
-        response = await self.client.put(f"/invoices/{invoice_id}", json={"status": "sent"})
+        response = await self.client.put(
+            f"/invoices/{invoice_id}", json={"status": "sent"}
+        )
         response.raise_for_status()
         logging.info(response.json())
         return response.json()
-    
+
     async def set_status_paid(self, invoice_id: str, method: str) -> dict:
-        response = await self.client.put(f"/invoices/{invoice_id}", json={"status": "paid", "paymentMethod": method})
+        response = await self.client.put(
+            f"/invoices/{invoice_id}", json={"status": "paid", "paymentMethod": method}
+        )
         response.raise_for_status()
         return response.json()
 

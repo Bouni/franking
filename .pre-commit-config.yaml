@@ -1,13 +1,31 @@
 ---
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+    # Ruff version.
+    rev: v0.15.12
     hooks:
+      # Run the linter.
       - id: ruff-check
-        args: [--fix]
+        args: [ --fix ]
+      # Run the formatter.
       - id: ruff-format
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
+
+  - repo: local
     hooks:
-      - id: prettier
-        types: [yaml]
+      - id: frontend-prettier
+        name: Prettier (Frontend)
+        # We use "." so it formats everything in /frontend 
+        # that isn't ignored by .prettierignore
+        entry: pnpm --dir frontend exec prettier --write .
+        language: system
+        files: ^frontend/
+        pass_filenames: false # This is the magic key
+
+      - id: frontend-eslint
+        name: ESLint (Frontend)
+        entry: bash -c 'cd frontend && pnpm exec eslint --fix' 
+        # --config eslint.config.mjs --ignore-path .eslintignore'
+        language: system
+        files: ^frontend/.*\.(js|ts|vue|mjs)$
+        pass_filenames: false
+
