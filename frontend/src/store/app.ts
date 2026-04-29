@@ -1,3 +1,4 @@
+eslint.config.mj0;
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
@@ -199,7 +200,7 @@ export const useAppStore = defineStore("app", () => {
           showToast(`Invoice ${inv.invoiceNumber} paid!`, "#8ac926", 10);
         });
       } else {
-        showToast("No new paid invoices!", "#8ac926", 10);
+        showToast("No new paid invoices!", "##2196f3", 10);
       }
     } catch (err: any) {
       showToast(
