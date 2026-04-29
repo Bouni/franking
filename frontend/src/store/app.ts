@@ -1,4 +1,3 @@
-eslint.config.mj0;
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/plugins/axios";
