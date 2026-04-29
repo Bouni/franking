@@ -1,20 +1,11 @@
+prepend-icon="mdi-cash0
 <template>
   <v-row>
     <v-col cols="12">
-      <v-chip
-        variant="flat"
-        color="#ffcc00"
-        size="large"
-      >
+      <v-chip variant="flat" color="#ffcc00" size="large">
         {{ (internetmarke.balance / 100).toFixed(2) }} €
         <template v-slot:prepend>
-                <v-img
-                  width="16"
-                  :src="
-                      postIcon
-                  "
-                  class="mr-2"
-                ></v-img>
+          <v-img width="32" :src="postIcon" class="mr-2"></v-img>
         </template>
       </v-chip>
     </v-col>
