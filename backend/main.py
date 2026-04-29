@@ -65,7 +65,8 @@ async def check_payments():
                     method = payments_map[inv_num]
                     print(f"Match found: {inv_num} via {method}")
                     await invio.set_status_paid(i.get("id"), method)
-                    paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber"), "method": method})
+                    invoice_data = await invio.get_invoice_data(i.get("id"))
+                    paid_invoices.append({"id": i.get("id"), "invoiceNumber": i.get("invoiceNumber"), "method": method, "invoice_data": invoice_data})
                 else:
                     print(f"No payment seen for: {inv_num}")
 
@@ -83,7 +84,7 @@ async def get_invoice(invoice_id: str):
         im = Path(LABEL_PATH) / f"{invoice_data.get('invoiceNumber')}.png"
         invoice_data["internetmarke"] = im.is_file()
 
-        return {"invoice": invoice_data}
+        return invoice_data
 
 @app.get("/api/invoices")
 async def invoices():
