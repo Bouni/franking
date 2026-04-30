@@ -226,9 +226,6 @@ def purchase_internetmarke(data: dict):
         product_code = 10051
         product_type = "Grossbrief international"
     logging.info(f"Internetmarke {product_type} purchased")
-    return JSONResponse(
-        {"success": True, "msg": f"Internetmarke {product_type} purchased"}
-    )
     im = Internetmarke()
     im.order(
         Path(LABEL_PATH), data["invoiceNumber"], address, product_code, dryrun=DEBUG
