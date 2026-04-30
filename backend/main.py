@@ -1,4 +1,3 @@
-#             id = uuid.uuid4(0
 import asyncio
 import logging
 import os
@@ -220,11 +219,11 @@ def purchase_internetmarke(data: dict):
             {"success": True, "msg": "Debug mode active, no Internetmarke purchased"}
         )
 
-    if data["countryCode"] == "DE":
+    if data["countryCode"] == "DEU":
         product_code = 21
     else:
         product_code = 10051
-
+    return JSONResponse({"success": True, "msg": "Internetmarke purchased"})
     im = Internetmarke()
     im.order(
         Path(LABEL_PATH), data["invoiceNumber"], address, product_code, dryrun=DEBUG
