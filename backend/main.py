@@ -221,15 +221,21 @@ def purchase_internetmarke(data: dict):
 
     if data["countryCode"] == "DEU":
         product_code = 21
+        product_type = "Grossbrief national"
     else:
         product_code = 10051
-    return JSONResponse({"success": True, "msg": "Internetmarke purchased"})
+        product_type = "Grossbrief international"
+    logging.info(f"Internetmarke {product_type} purchased")
+    return JSONResponse(
+        {"success": True, "msg": f"Internetmarke {product_type} purchased"}
+    )
     im = Internetmarke()
     im.order(
         Path(LABEL_PATH), data["invoiceNumber"], address, product_code, dryrun=DEBUG
     )
-    logging.info("Internetmarke purchased")
-    return JSONResponse({"success": True, "msg": "Internetmarke purchased"})
+    return JSONResponse(
+        {"success": True, "msg": f"Internetmarke {product_type} purchased"}
+    )
 
 
 @app.post("/api/internetmarke/print")
