@@ -47,7 +47,7 @@ class PayPal:
     def filter_transactions(self, transactions):
         transaction_data = []
         for t in transactions:
-            if "INV" in t.get("transaction_info", {}).get("transaction_note"):
+            if "INV" in t.get("transaction_info", {}).get("transaction_note", ""):
                 transaction_data.append(
                     {
                         "invoice": self.get_invoice_number(
