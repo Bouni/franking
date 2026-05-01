@@ -64,6 +64,7 @@
             isLoading?.action === 'fetchInvoices' ||
             (isLoading === null && invoices.length === 0)
           "
+          mobile-breakpoint="600"
         >
           <template v-slot:loading>
             <v-skeleton-loader type="table-row@10"></v-skeleton-loader>
