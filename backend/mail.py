@@ -38,7 +38,7 @@ class Mail:
     async def imap_session(self):
         imap = aioimaplib.IMAP4_SSL(EMAIL_SMTP_SERVER)
         try:
-            await imap.wait_hello()
+            await imap.wait_hello_from_server()
             await imap.login(EMAIL_USER, EMAIL_PASSWORD)
             yield imap
         finally:
