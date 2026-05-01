@@ -5,6 +5,8 @@ description = "A simple Interface for creating shipping labels using Deutsche Po
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aioimaplib>=2.0.1",
+    "aiosmtplib>=5.1.0",
     "brother-ql",
     "fastapi[standard]>=0.128.0",
     "fints>=5.0.0",
