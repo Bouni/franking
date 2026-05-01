@@ -44,7 +44,7 @@ class Mail:
         finally:
             await imap.logout()
 
-    async def send_invoice(self, invoice_id: str):
+    async def send_invoice(self):
         recipient = self.invoice_data.get("customer", {}).get("email")
 
         if not recipient:
@@ -74,7 +74,9 @@ class Mail:
             password=EMAIL_PASSWORD,
             use_tls=True,
         )
-        logging.info(f"Invoice {invoice_id} sent to {recipient}")
+        logging.info(
+            f"Invoice {self.invoice_data.get('invoice_id', '')} sent to {recipient}"
+        )
 
         # Save to Sent folder
         async with self.imap_session() as imap:
