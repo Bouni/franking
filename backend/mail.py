@@ -87,7 +87,7 @@ class Mail:
 
         # Save to Sent folder
         async with self.imap_session() as imap:
-            folder = "Gewerbe.Verschickte Rechnungen"
+            folder = '"Gewerbe.Verschickte Rechnungen"'
             response = await imap.append(message.as_bytes(), folder)
             if response.result != "OK":
                 logging.error(f"Failed to append to {folder}: {response.lines}")
