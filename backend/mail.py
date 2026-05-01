@@ -1,16 +1,14 @@
-import imaplib
 import logging
 import os
-import smtplib
-import time
+from contextlib import asynccontextmanager
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
+import aioimaplib
+import aiosmtplib
 from dotenv import load_dotenv
-
-from invio import Invio
 
 load_dotenv()
 
@@ -30,17 +28,24 @@ INVIO_PASSWORD = os.getenv("INVIO_PASSWORD", "")
 
 
 class Mail:
-    def __init__(self, subject: str, body: str):
+    def __init__(self, subject: str, body: str, invoice_data: dict, attachment: bytes):
         self.subject = subject
         self.body = body
+        self.invoice_data = invoice_data
+        self.attachment = attachment
 
-    def send_invoice(self, invoice_id: str):
-        invio = Invio()
-        invoice_data = invio.get_invoice_data(invoice_id)
-        invoice_pdf = invio.get_invoice_pdf(invoice_id)
+    @asynccontextmanager
+    async def imap_session(self):
+        imap = aioimaplib.IMAP4_SSL(EMAIL_SMTP_SERVER)
+        try:
+            await imap.wait_hello()
+            await imap.login(EMAIL_USER, EMAIL_PASSWORD)
+            yield imap
+        finally:
+            await imap.logout()
 
-        # recipient = "bouni@owee.de"
-        recipient = invoice_data.get("customer", {}).get("email")
+    async def send_invoice(self, invoice_id: str):
+        recipient = self.invoice_data.get("customer", {}).get("email")
 
         if not recipient:
             raise Exception("No mail address found")
@@ -53,23 +58,24 @@ class Mail:
         message.attach(body_part)
 
         part = MIMEApplication(
-            invoice_pdf, Name=f"{invoice_data.get('invoiceNumber')}.pdf"
+            self.attachment, Name=f"{self.invoice_data.get('invoiceNumber')}.pdf"
         )
         part["Content-Disposition"] = (
-            f'attachment; filename="{invoice_data.get("invoiceNumber")}.pdf"'
+            f'attachment; filename="{self.invoice_data.get("invoiceNumber")}.pdf"'
         )
         message.attach(part)
 
-        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
-            server.login(EMAIL_USER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_SENDER, recipient, message.as_string())
-            logging.info(f"Invoice sent to {recipient}")
+        # send e-mail
+        await aiosmtplib.send(
+            message,
+            hostname=EMAIL_SMTP_SERVER,
+            port=EMAIL_SMTP_PORT,
+            username=EMAIL_USER,
+            password=EMAIL_PASSWORD,
+            use_tls=True,
+        )
+        logging.info(f"Invoice {invoice_id} sent to {recipient}")
 
-        with imaplib.IMAP4_SSL(EMAIL_SMTP_SERVER) as imap:
-            imap.login(EMAIL_USER, EMAIL_PASSWORD)
-            imap.append(
-                "Sent",
-                "",
-                imaplib.Time2Internaldate(time.time()),
-                message.as_bytes(),
-            )
+        # Save to Sent folder
+        async with self.imap_session() as imap:
+            await imap.append("Sent", message.as_bytes())
