@@ -42,7 +42,14 @@ class Mail:
             await imap.login(EMAIL_USER, EMAIL_PASSWORD)
             yield imap
         finally:
-            await imap.logout()
+            # Check if we are actually logged in/authenticated before trying to logout
+            # The 'NONAUTH' state is where it sits after wait_hello but before login
+            # The 'AUTH' or 'SELECTED' states are where logout is legal
+            if imap.protocol and imap.protocol.state in ["AUTH", "SELECTED", "NONAUTH"]:
+                try:
+                    await imap.logout()
+                except Exception as e:
+                    logging.warning(f"Error during IMAP logout: {e}")
 
     async def send_invoice(self):
         recipient = self.invoice_data.get("customer", {}).get("email")
