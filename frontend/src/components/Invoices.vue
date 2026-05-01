@@ -1,10 +1,16 @@
 <template>
   <v-row>
-    <v-row class="mb-4">
-      <v-col cols="1">
+    <v-row class="mb-4" align="center">
+      <v-col cols="12" md="auto" class="d-flex justify-center justify-md-start">
         <Internetmarke />
       </v-col>
-      <v-col v-for="(color, state) in status_colors" :key="state" cols="1">
+      <v-col
+        v-for="(color, state) in status_colors"
+        :key="state"
+        cols="6"
+        sm="4"
+        md="auto"
+      >
         <v-switch
           v-model="selectedStates"
           :label="state"
@@ -13,7 +19,7 @@
           hide-details
         ></v-switch>
       </v-col>
-      <v-col cols="1">
+      <v-col cols="12" md="auto" class="d-flex justify-center ml-md-4">
         <v-btn
           color="primary"
           class="px-4 mt-3 ml-5"
@@ -245,6 +251,7 @@ const headers = [
   { title: "Status", key: "status", align: "center", sortable: false },
   { title: "Sum", key: "subtotal", align: "start" },
   { title: "Customer", key: "customer.name", align: "start" },
+  { title: "Contact", key: "customer.contactName", align: "start" },
   { title: "Address", key: "customer.address", align: "start" },
   { title: "City", key: "customer.city", align: "start" },
   { title: "Postal code", key: "customer.postalCode", align: "start" },
