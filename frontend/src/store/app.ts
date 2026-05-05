@@ -87,10 +87,10 @@ export const useAppStore = defineStore("app", () => {
         invoice_id: invoice_id,
         method: method,
       });
-      response = await api.get(`/invoices/${invoice_id}`);
+      const response = await api.get(`/invoices/${invoice_id}`);
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
-        invoice = response;
+        invoice.value = response;
         showToast("Successfully marked Invoice as paid!", "#8ac926", 3);
       } else {
         showToast("Invoice not found", "#ff595e", 10);

@@ -134,13 +134,13 @@
                 {
                   icon: paypalIcon,
                   color: 'grey-darken-3',
-                  action: 'markPaidPaypal',
+                  action: 'markInvoicePaid',
                   onClick: () => markInvoicePaid(item.id, 'PayPal'),
                 },
                 {
                   icon: sparkasseIcon,
                   color: 'grey-darken-3',
-                  action: 'markPaidBank',
+                  action: 'markInvoicePaid',
                   onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
                 },
               ]"
