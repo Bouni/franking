@@ -116,7 +116,7 @@ export const useAppStore = defineStore("app", () => {
       const response = await api.get(`/invoices/${invoice_id}`);
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
-        invoice.value = response;
+        Object.assign(invoice, response.data);
         showToast("Successfully marked Invoice as complete!", "#8ac926", 3);
       } else {
         showToast("Invoice not found", "#ff595e", 10);
