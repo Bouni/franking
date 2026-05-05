@@ -21,9 +21,9 @@ const { isLoading } = storeToRefs(store);
 </script>
 
 <template>
-  <v-speed-dial location="top center" transition="scale-transition">
+  <v-speed-dial location="left center" transition="scale-transition">
     <template #activator="{ props: dialProps }">
-      <v-tooltip text="Mark Invoice as paid" location="left">
+      <v-tooltip text="Mark Invoice as paid" location="top">
         <template #activator="{ props: tooltipProps }">
           <v-btn
             v-bind="mergeProps(dialProps, tooltipProps)"
@@ -42,6 +42,7 @@ const { isLoading } = storeToRefs(store);
       :key="item.action"
       :color="item.color"
       :loading="isLoading?.action === item.action && isLoading?.id === actionId"
+      class="ma-2"
       @click="item.onClick"
     >
       <v-img :src="item.icon" width="20" height="20" />
