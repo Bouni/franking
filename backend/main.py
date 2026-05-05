@@ -128,17 +128,15 @@ async def invoices():
 
 @app.post("/api/invoices/mark/paid")
 async def mark_invoice_paid(data: dict):
-    await asyncio.sleep(2)
-    # async with await Invio.create() as invio:
-    # invio.set_status_paid(data.get("invoice_id", ""), data.get("method", ""))
+    async with await Invio.create() as invio:
+        invio.set_status_paid(data.get("invoice_id", ""), data.get("method", ""))
     return JSONResponse({"success": True})
 
 
 @app.post("/api/invoices/mark/complete")
 async def mark_invoice_complete(data: dict):
-    await asyncio.sleep(2)
-    # async with await Invio.create() as invio:
-    # invio.set_status_complete(data.get("invoice_id", ""))
+    async with await Invio.create() as invio:
+        invio.set_status_complete(data.get("invoice_id", ""))
     return JSONResponse({"success": True})
 
 
