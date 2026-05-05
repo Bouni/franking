@@ -129,6 +129,7 @@ async def invoices():
 @app.post("/api/invoices/mark/paid")
 async def mark_invoice_paid(data: dict):
     async with await Invio.create() as invio:
+        print(f"mark {data.get('invoice_id', '')} as paid by {data.get('method', '')}")
         invio.set_status_paid(data.get("invoice_id", ""), data.get("method", ""))
     return JSONResponse({"success": True})
 
