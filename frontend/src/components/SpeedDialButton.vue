@@ -21,34 +21,30 @@ const { isLoading } = storeToRefs(store);
 </script>
 
 <template>
-  <div class="ma-2">
-    <v-speed-dial location="top center" transition="scale-transition">
-      <template #activator="{ props: dialProps }">
-        <v-tooltip text="Mark Invoice as paid" location="top">
-          <template #activator="{ props: tooltipProps }">
-            <v-btn
-              v-bind="mergeProps(dialProps, tooltipProps)"
-              color="green"
-              icon="mdi-currency-eur"
-              :disabled="disabled"
-            >
-            </v-btn>
-          </template>
-        </v-tooltip>
-      </template>
+  <v-speed-dial location="top center" transition="scale-transition">
+    <template #activator="{ props: dialProps }">
+      <v-tooltip text="Mark Invoice as paid" location="left">
+        <template #activator="{ props: tooltipProps }">
+          <v-btn
+            v-bind="mergeProps(dialProps, tooltipProps)"
+            color="green"
+            icon="mdi-currency-eur"
+            :disabled="disabled"
+          >
+          </v-btn>
+        </template>
+      </v-tooltip>
+    </template>
 
-      <v-btn
-        v-for="item in actions"
-        :key="item.action"
-        :color="item.color"
-        :loading="
-          isLoading?.action === item.action && isLoading?.id === actionId
-        "
-        size="small"
-        @click="item.onClick"
-      >
-        <v-img :src="item.icon" width="20" height="20" />
-      </v-btn>
-    </v-speed-dial>
-  </div>
+    <v-btn
+      icon
+      v-for="item in actions"
+      :key="item.action"
+      :color="item.color"
+      :loading="isLoading?.action === item.action && isLoading?.id === actionId"
+      @click="item.onClick"
+    >
+      <v-img :src="item.icon" width="20" height="20" />
+    </v-btn>
+  </v-speed-dial>
 </template>
