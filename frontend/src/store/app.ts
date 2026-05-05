@@ -110,10 +110,13 @@ export const useAppStore = defineStore("app", () => {
     isLoading.value = { id: invoice_id, action: "markInvoiceComplete" };
 
     try {
-      await api.get(`/invoices/${invoice_id}/complete`);
+      await api.post(`/invoices/mark/complete`, {
+        invoice_id: invoice_id,
+      });
+      const response = await api.get(`/invoices/${invoice_id}`);
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
-        invoice.status = "complete";
+        invoice.value = response;
         showToast("Successfully marked Invoice as complete!", "#8ac926", 3);
       } else {
         showToast("Invoice not found", "#ff595e", 10);
