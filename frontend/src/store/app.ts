@@ -79,14 +79,18 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  async function markInvoicePaid(invoice_id: string) {
+  async function markInvoicePaid(invoice_id: string, method: string) {
     isLoading.value = { id: invoice_id, action: "markInvoicePaid" };
 
     try {
-      await api.get(`/invoices/${invoice_id}/paid`);
+      await api.post(`/invoices/mark/paid`, {
+        invoice_id: invoice_id,
+        method: method,
+      });
+      response = await api.get(`/invoices/${invoice_id}`);
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
-        invoice.status = "paid";
+        invoice = response;
         showToast("Successfully marked Invoice as paid!", "#8ac926", 3);
       } else {
         showToast("Invoice not found", "#ff595e", 10);

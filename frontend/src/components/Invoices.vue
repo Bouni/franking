@@ -127,15 +127,33 @@
               @click="sendInvoice(item.id)"
             />
 
-            <ActionButton
-              icon="mdi-currency-eur"
-              color="green"
-              tooltip="Mark as paid"
-              action="markInvoicePaid"
+            <SpeedDialButton
               :action-id="item.id"
               :disabled="item.status !== 'sent'"
-              @click="markInvoicePaid(item.id)"
+              :actions="[
+                {
+                  icon: paypalIcon,
+                  color: 'grey-darken-3',
+                  action: 'markPaidPaypal',
+                  onClick: () => markInvoicePaid(item.id, 'PayPal'),
+                },
+                {
+                  icon: sparkasseIcon,
+                  color: 'grey-darken-3',
+                  action: 'markPaidBank',
+                  onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
+                },
+              ]"
             />
+            <!-- <ActionButton -->
+            <!--   icon="mdi-currency-eur" -->
+            <!--   color="green" -->
+            <!--   tooltip="Mark as paid" -->
+            <!--   action="markInvoicePaid" -->
+            <!--   :action-id="item.id" -->
+            <!--   :disabled="item.status !== 'sent'" -->
+            <!--   @click="markInvoicePaid(item.id)" -->
+            <!-- /> -->
 
             <ActionButton
               icon="mdi-postage-stamp"
@@ -186,6 +204,7 @@
 <script setup lang="ts">
 import Internetmarke from "@/components/Internetmarke.vue";
 import ActionButton from "@/components/ActionButton.vue";
+import SpeedDialButton from "@/components/SpeedDialButton.vue";
 import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
