@@ -15,7 +15,7 @@ dependencies = [
     "pycountry>=24.6.1",
     "pyipp>=0.17.2",
     "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.27",
+    "python-multipart>=0.0.31",
 ]
 
 [tool.uv.sources]
