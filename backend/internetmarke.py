@@ -87,6 +87,23 @@ class Internetmarke:
         dryrun: bool = False,
     ):
         oid = self.session.create_order()
+        if receiver.extra:
+            r = ir.mk_addr(
+                name=receiver.name,
+                line=receiver.address,
+                postcode=receiver.postcode,
+                city=receiver.city,
+                country=receiver.country,
+                line2=receiver.extra,
+            )
+        else:
+            r = ir.mk_addr(
+                name=receiver.name,
+                line=receiver.address,
+                postcode=receiver.postcode,
+                city=receiver.city,
+                country=receiver.country,
+            )
         p = ir.mk_png_pos(
             product,
             sender=ir.mk_addr(
@@ -96,25 +113,21 @@ class Internetmarke:
                 city=self.sender.city,
                 country=self.sender.country,
             ),
-            receiver=ir.mk_addr(
-                name=receiver.name,
-                line=receiver.address,
-                postcode=receiver.postcode,
-                city=receiver.city,
-                country=receiver.country,
-            ),
+            receiver=r,
         )
+        print(r)
         t = ir.calc_total(p)
-        body = ir.mk_png_req(oid, p, t)
+        # body = ir.mk_png_req(oid, p, t)
         fn = str(path / f"{invoice_number}.zip")
-        if not dryrun:
-            logging.info("Checkout Internetmarke")
-            d = self.session.checkout_png(body, fn)
-            logging.info("Extract Internetmarke")
-            self._extract_zip(path, invoice_number)
-        else:
-            logging.info("Dryrun, skip checkout Internetmarke")
-            d = None
-            logging.info("Dryrun, extract dummy Internetmarke")
-            self._extract_zip(path, "label")
+        d = None
+        # if not dryrun:
+        #     logging.info("Checkout Internetmarke")
+        #     d = self.session.checkout_png(body, fn)
+        #     logging.info("Extract Internetmarke")
+        #     self._extract_zip(path, invoice_number)
+        # else:
+        #     logging.info("Dryrun, skip checkout Internetmarke")
+        #     d = None
+        #     logging.info("Dryrun, extract dummy Internetmarke")
+        #     self._extract_zip(path, "label")
         return {"oid": oid, "p": p, "t": t, "fn": fn, "d": d}

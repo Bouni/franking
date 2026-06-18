@@ -206,6 +206,7 @@ def purchase_internetmarke(data: dict):
         city=data["city"],
         postcode=data["postalCode"],
         country=data["countryCode"],
+        extra=data.get("phone"),
     )
 
     if not Path(LABEL_PATH).is_dir():

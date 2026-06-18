@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class Address(BaseModel):
@@ -7,6 +8,7 @@ class Address(BaseModel):
     city: str
     postcode: str
     country: str
+    extra: Optional[str] = None
 
 
 class Item(BaseModel):
