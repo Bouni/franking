@@ -87,14 +87,14 @@ class Internetmarke:
         dryrun: bool = False,
     ):
         oid = self.session.create_order()
-        if receiver.extra:
+        if receiver.phone:
             r = ir.mk_addr(
                 name=receiver.name,
                 line=receiver.address,
                 postcode=receiver.postcode,
                 city=receiver.city,
                 country=receiver.country,
-                line2=receiver.extra,
+                line2=receiver.phone,
             )
         else:
             r = ir.mk_addr(
@@ -115,19 +115,17 @@ class Internetmarke:
             ),
             receiver=r,
         )
-        print(r)
         t = ir.calc_total(p)
-        # body = ir.mk_png_req(oid, p, t)
+        body = ir.mk_png_req(oid, p, t)
         fn = str(path / f"{invoice_number}.zip")
-        d = None
-        # if not dryrun:
-        #     logging.info("Checkout Internetmarke")
-        #     d = self.session.checkout_png(body, fn)
-        #     logging.info("Extract Internetmarke")
-        #     self._extract_zip(path, invoice_number)
-        # else:
-        #     logging.info("Dryrun, skip checkout Internetmarke")
-        #     d = None
-        #     logging.info("Dryrun, extract dummy Internetmarke")
-        #     self._extract_zip(path, "label")
+        if not dryrun:
+            logging.info("Checkout Internetmarke")
+            d = self.session.checkout_png(body, fn)
+            logging.info("Extract Internetmarke")
+            self._extract_zip(path, invoice_number)
+        else:
+            logging.info("Dryrun, skip checkout Internetmarke")
+            d = None
+            logging.info("Dryrun, extract dummy Internetmarke")
+            self._extract_zip(path, "label")
         return {"oid": oid, "p": p, "t": t, "fn": fn, "d": d}

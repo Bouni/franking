@@ -8,7 +8,7 @@ class Address(BaseModel):
     city: str
     postcode: str
     country: str
-    extra: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class Item(BaseModel):
