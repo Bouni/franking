@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 from pathlib import Path
 
 import aioimaplib
@@ -61,15 +62,19 @@ class Mail:
         message["Subject"] = self.subject
         message["From"] = EMAIL_SENDER
         message["To"] = recipient
+        message["Date"] = formatdate(localtime=True)
+        message["Message-ID"] = make_msgid(domain=EMAIL_SENDER.split("@")[-1])
         body_part = MIMEText(self.body)
         message.attach(body_part)
 
+        filename = f"{self.invoice_data.get('invoiceNumber')}.pdf"
         part = MIMEApplication(
-            self.attachment, Name=f"{self.invoice_data.get('invoiceNumber')}.pdf"
+            self.attachment,
+            Name=filename,
+            _subtype="pdf",
         )
-        part["Content-Disposition"] = (
-            f'attachment; filename="{self.invoice_data.get("invoiceNumber")}.pdf"'
-        )
+        part.add_header("Content-Disposition", "attachment", filename=filename)
+
         message.attach(part)
 
         # send e-mail
