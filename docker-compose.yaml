@@ -8,5 +8,6 @@ services:
       - 8567:8000
     volumes:
       - /opt/docker/invio/labels:/app/labels
+      - /opt/docker/invio/data/invio.db:/app/invio.db:ro
       - /var/run/cups/cups.sock:/var/run/cups/cups.sock
       - /etc/cups:/etc/cups:ro
