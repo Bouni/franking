@@ -491,19 +491,22 @@ const grandTotal = computed(() => {
 
 // Validation rules array of functions returning true or an error message string
 const rules = {
-  required: (val) => !!val || "This field is required.",
-  email: (val) => /.+@.+\..+/.test(val) || "Must be a valid email address.",
-  minQuantity: (val) => val >= 1 || "Quantity must be at least 1.",
+  required: (val: unknown) => !!val || "This field is required.",
+  email: (val: string) =>
+    /.+@.+\..+/.test(val) || "Must be a valid email address.",
+  minQuantity: (val: number) => val >= 1 || "Quantity must be at least 1.",
+};
+
+type FormInstance = {
+  validate: () => Promise<{ valid: boolean }>;
 };
 
 const handleSubmit = async () => {
-  // 1. Trigger validation programmatically across all fields
-  const { valid } = await form.value.validate();
+  const formRef = form.value as FormInstance | null;
+  const { valid } = (await formRef?.validate()) ?? { valid: false };
 
-  // 2. Halt submission if any field fails validation
   if (!valid) return;
 
-  // 3. Process order submission if valid
   console.log("Order submitted successfully:", order);
 };
 </script>

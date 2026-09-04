@@ -25,7 +25,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // Use route meta title or fall back to a default app title
   const DEFAULT_TITLE = "";
-  document.title = to.meta.title || DEFAULT_TITLE;
+  document.title = (to.meta.title as string) || DEFAULT_TITLE;
   next();
 });
 
