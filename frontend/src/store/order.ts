@@ -24,7 +24,6 @@ export const useOrderStore = defineStore("order", () => {
     } catch (err: any) {
       console.log("Error loading products");
     } finally {
-      isLoading.value = null;
     }
   }
 
