@@ -84,6 +84,14 @@ async def check_payments():
     }
 
 
+@app.get("/api/order/products")
+async def get_products():
+    async with await Invio.create() as invio:
+        products = await invio.get_products()
+
+        return products
+
+
 @app.get("/api/invoices/{invoice_id}")
 async def get_invoice(invoice_id: str):
     async with await Invio.create() as invio:

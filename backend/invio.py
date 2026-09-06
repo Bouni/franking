@@ -203,6 +203,11 @@ class Invio:
         response.raise_for_status()
         return response.content
 
+    async def get_products(self) -> dict:
+        response = await self.client.get("/products")
+        response.raise_for_status()
+        return response.content
+
     async def close(self):
         await self.client.aclose()
 
