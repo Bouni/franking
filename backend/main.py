@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import textwrap
@@ -5,7 +6,6 @@ from pathlib import Path
 
 import anyio
 import pycountry
-import json
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
@@ -244,11 +244,22 @@ async def print_internetmarke(data: dict):
 async def get_products():
     async with await Invio.create() as invio:
         products = await invio.get_products()
-        products = {
-            k: products[k]
-            for k in products.keys()
-            - ["description", "sku", "unit", "isActive", "createdAt", "updatedAt"]
-        }
+        products = [
+            {
+                k: v
+                for k, v in p.items()
+                if k
+                not in [
+                    "description",
+                    "sku",
+                    "unit",
+                    "isActive",
+                    "createdAt",
+                    "updatedAt",
+                ]
+            }
+            for p in products
+        ]
         return products
 
 
