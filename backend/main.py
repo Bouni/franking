@@ -88,7 +88,7 @@ async def check_payments():
 async def get_products():
     async with await Invio.create() as invio:
         products = await invio.get_products()
-
+        print(type(products))
         return products
 
 
