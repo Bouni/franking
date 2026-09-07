@@ -244,6 +244,11 @@ async def print_internetmarke(data: dict):
 async def get_products():
     async with await Invio.create() as invio:
         products = await invio.get_products()
+        products = {
+            k: products[k]
+            for k in products.keys()
+            - ["description", "sku", "unit", "isActive", "createdAt", "updatedAt"]
+        }
         return products
 
 
