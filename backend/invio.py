@@ -15,32 +15,6 @@ INVIO_USER = os.getenv("INVIO_USER", "")
 INVIO_PASSWORD = os.getenv("INVIO_PASSWORD", "")
 
 
-# @app.get("/api/invoices")
-# async def invoices():
-#     async with await Invio.create() as invio:
-#         raw_invoices = await invio.get_invoices()
-#         invoice_ids = [
-#             (i.get("id"), i.get("customerId"))
-#             for i in raw_invoices
-#             if i.get("status") in ("draft", "sent", "paid", "complete")
-#         ]
-#
-#         async def fetch_full_invoice(inv_id, cust_id):
-#             inv_data, cust_data = await asyncio.gather(
-#                 invio.get_invoice_data(inv_id), invio.get_customer_data(cust_id)
-#             )
-#             inv_data["customer"] = cust_data
-#
-#             im = Path(LABEL_PATH) / f"{inv_data.get('invoiceNumber')}.png"
-#             inv_data["internetmarke"] = im.is_file()
-#             return inv_data
-#
-#         invoices = await asyncio.gather(
-#             *[fetch_full_invoice(iid, cid) for iid, cid in invoice_ids]
-#         )
-#
-#         invoices.sort(key=lambda x: x.get("invoiceNumber", 0), reverse=True)
-#         return {"invoices": invoices}
 class InvioDB:
     def __init__(self, db_path: str = "/app/invio.db"):
         self.uri = f"file:{db_path}?mode=ro"
@@ -206,7 +180,7 @@ class Invio:
     async def get_products(self) -> dict:
         response = await self.client.get("/products")
         response.raise_for_status()
-        return response.content
+        return response.json()
 
     async def close(self):
         await self.client.aclose()
