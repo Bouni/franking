@@ -265,7 +265,7 @@ async def get_products():
         return products
 
 
-@app.post("/webhooks/paypal-ipn")
+@app.post("/paypal/ipn")
 async def paypal_ipn_listener(request: Request):
     # 1. Read raw form-encoded payload from PayPal
     form_data = await request.form()
