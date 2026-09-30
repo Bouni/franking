@@ -297,7 +297,7 @@ async def paypal_ipn_listener(request: Request):
 
         note = payload.get("memo") or payload.get("custom", "")
 
-        print(
+        logging.info(
             f"Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}"
         )
 
@@ -308,11 +308,11 @@ async def paypal_ipn_listener(request: Request):
                 if i.get("status") == "sent":
                     inv_num = str(i.get("invoiceNumber"))
                     if inv_num in note:
-                        print(f"Match found: {inv_num} via PayPal (IPN)")
+                        logging.info(f"Match found: {inv_num} via PayPal (IPN)")
                         await invio.set_status_paid(i.get("id"), "PayPal")
                         await send_notification(
                             title="PayPal Payment received",
-                            message=f"Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}",
+                            message=f"{amount} {currency} from {full_name}. Note: {note}",
                             tags=["money_with_wings"],
                             priority=5,
                         )
