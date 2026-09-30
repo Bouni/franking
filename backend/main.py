@@ -9,7 +9,7 @@ import anyio
 import httpx
 import pycountry
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -30,11 +30,6 @@ logging.info(f"DEBUG = {DEBUG}")
 LABEL_PATH = os.getenv("LABEL_PATH", default="/opt/docker/invio/labels")
 
 BASE_PATH = Path(__file__).resolve().parent.parent
-
-PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
-PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
-PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID")
-PAYPAL_BASE_URL = "https://api-m.paypal.com"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -270,50 +265,47 @@ async def get_products():
         return products
 
 
-@app.post("/webhooks/paypal")
-async def paypal_webhook(request: Request):
-    payload = await request.json()
+@app.post("/webhooks/paypal-ipn")
+async def paypal_ipn_listener(request: Request):
+    # 1. Read raw form-encoded payload from PayPal
+    form_data = await request.form()
+    payload = dict(form_data)
+
+    if not payload:
+        raise HTTPException(status_code=400, detail="Empty payload")
+
+    # 2. Verify IPN with PayPal by sending the payload back with `cmd=_notify-validate`
+    verify_payload = {"cmd": "_notify-validate", **payload}
 
     async with httpx.AsyncClient() as client:
-        # 1. Get Access Token
-        token_res = await client.post(
-            f"{PAYPAL_BASE_URL}/v1/oauth2/token",
-            auth=(PAYPAL_CLIENT_ID, PAYPAL_SECRET),
-            data={"grant_type": "client_credentials"},
-        )
-        if token_res.status_code != 200:
-            raise HTTPException(status_code=500, detail="Auth failed")
-
-        token = token_res.json()["access_token"]
-
-        # 2. Verify Webhook Signature
-        verify_res = await client.post(
-            f"{PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "transmission_id": request.headers.get("paypal-transmission-id"),
-                "transmission_time": request.headers.get("paypal-transmission-time"),
-                "cert_url": request.headers.get("paypal-cert-url"),
-                "auth_algo": request.headers.get("paypal-auth-algo"),
-                "transmission_sig": request.headers.get("paypal-transmission-sig"),
-                "webhook_id": PAYPAL_WEBHOOK_ID,
-                "webhook_event": payload,
-            },
+        response = await client.post(
+            "https://ipnpb.paypal.com/cgi-bin/webscr", data=verify_payload
         )
 
-    if verify_res.json().get("verification_status") != "SUCCESS":
-        raise HTTPException(status_code=400, detail="Invalid signature")
+    # PayPal responds with "VERIFIED" or "INVALID"
+    if response.text.strip() != "VERIFIED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid IPN signature"
+        )
 
-    # 3. Handle your event synchronously
-    event_type = payload.get("event_type")
-    resource = payload.get("resource", {})
+    # 3. Extract transaction details for direct money transfers
+    payment_status = payload.get("payment_status")  # e.g., "Completed"
 
-    pprint.pprint(payload)
+    if payment_status == "Completed":
+        amount = payload.get("mc_gross")  # e.g., "1.00"
+        currency = payload.get("mc_currency")  # e.g., "EUR"
+        first_name = payload.get("first_name", "")
+        last_name = payload.get("last_name", "")
+        full_name = f"{first_name} {last_name}".strip()
 
-    if event_type == "PAYMENT.CAPTURE.COMPLETED":
-        payment_id = resource.get("id")
-        # Do your quick logic here (e.g., mark order paid in DB)
-        print(f"Received payment for {payment_id}")
+        # Message/Note attached by the sender
+        note = payload.get("memo") or payload.get("custom", "")
+
+        print(
+            f"Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}"
+        )
+
+        pprint.pprint(payload)
 
     return {"status": "ok"}
 
