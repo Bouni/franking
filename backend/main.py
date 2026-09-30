@@ -312,7 +312,7 @@ async def paypal_ipn_listener(request: Request):
                         await invio.set_status_paid(i.get("id"), "PayPal")
                         await send_notification(
                             title="PayPal Payment received",
-                            message="Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}",
+                            message=f"Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}",
                             tags=["money_with_wings"],
                             priority=5,
                         )
