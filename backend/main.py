@@ -1,13 +1,15 @@
 import json
 import logging
 import os
+import pprint
 import textwrap
 from pathlib import Path
 
 import anyio
+import httpx
 import pycountry
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -28,6 +30,11 @@ logging.info(f"DEBUG = {DEBUG}")
 LABEL_PATH = os.getenv("LABEL_PATH", default="/opt/docker/invio/labels")
 
 BASE_PATH = Path(__file__).resolve().parent.parent
+
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
+PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID")
+PAYPAL_BASE_URL = "https://api-m.paypal.com"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -261,6 +268,54 @@ async def get_products():
             for p in products
         ]
         return products
+
+
+@app.post("/webhooks/paypal")
+async def paypal_webhook(request: Request):
+    payload = await request.json()
+
+    async with httpx.AsyncClient() as client:
+        # 1. Get Access Token
+        token_res = await client.post(
+            f"{PAYPAL_BASE_URL}/v1/oauth2/token",
+            auth=(PAYPAL_CLIENT_ID, PAYPAL_SECRET),
+            data={"grant_type": "client_credentials"},
+        )
+        if token_res.status_code != 200:
+            raise HTTPException(status_code=500, detail="Auth failed")
+
+        token = token_res.json()["access_token"]
+
+        # 2. Verify Webhook Signature
+        verify_res = await client.post(
+            f"{PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "transmission_id": request.headers.get("paypal-transmission-id"),
+                "transmission_time": request.headers.get("paypal-transmission-time"),
+                "cert_url": request.headers.get("paypal-cert-url"),
+                "auth_algo": request.headers.get("paypal-auth-algo"),
+                "transmission_sig": request.headers.get("paypal-transmission-sig"),
+                "webhook_id": PAYPAL_WEBHOOK_ID,
+                "webhook_event": payload,
+            },
+        )
+
+    if verify_res.json().get("verification_status") != "SUCCESS":
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    # 3. Handle your event synchronously
+    event_type = payload.get("event_type")
+    resource = payload.get("resource", {})
+
+    pprint.pprint(payload)
+
+    if event_type == "PAYMENT.CAPTURE.COMPLETED":
+        payment_id = resource.get("id")
+        # Do your quick logic here (e.g., mark order paid in DB)
+        print(f"Received payment for {payment_id}")
+
+    return {"status": "ok"}
 
 
 app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")

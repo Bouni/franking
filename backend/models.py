@@ -1,14 +1,16 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
 class Address(BaseModel):
     name: str
-    address: str
+    address: str = ""
+    street: str = ""
+    housenumber: str = ""
     city: str
     postcode: str
     country: str
-    phone: Optional[str] = None
+    phone: str | None = None
+    email: str = ""
 
 
 class Item(BaseModel):
