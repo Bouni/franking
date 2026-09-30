@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import pprint
 import textwrap
 from pathlib import Path
 
@@ -267,14 +266,13 @@ async def get_products():
 
 @app.post("/paypal/ipn")
 async def paypal_ipn_listener(request: Request):
-    # 1. Read raw form-encoded payload from PayPal
+
     form_data = await request.form()
     payload = dict(form_data)
 
     if not payload:
         raise HTTPException(status_code=400, detail="Empty payload")
 
-    # 2. Verify IPN with PayPal by sending the payload back with `cmd=_notify-validate`
     verify_payload = {"cmd": "_notify-validate", **payload}
 
     async with httpx.AsyncClient() as client:
@@ -282,13 +280,11 @@ async def paypal_ipn_listener(request: Request):
             "https://ipnpb.paypal.com/cgi-bin/webscr", data=verify_payload
         )
 
-    # PayPal responds with "VERIFIED" or "INVALID"
     if response.text.strip() != "VERIFIED":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid IPN signature"
         )
 
-    # 3. Extract transaction details for direct money transfers
     payment_status = payload.get("payment_status")  # e.g., "Completed"
 
     if payment_status == "Completed":
@@ -298,14 +294,21 @@ async def paypal_ipn_listener(request: Request):
         last_name = payload.get("last_name", "")
         full_name = f"{first_name} {last_name}".strip()
 
-        # Message/Note attached by the sender
         note = payload.get("memo") or payload.get("custom", "")
 
         print(
             f"Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}"
         )
 
-        pprint.pprint(payload)
+        async with await Invio.create() as invio:
+            raw_invoices = await invio.get_invoices()
+
+            for i in raw_invoices:
+                if i.get("status") == "sent":
+                    inv_num = str(i.get("invoiceNumber"))
+                    if inv_num in note:
+                        print(f"Match found: {inv_num} via PayPal (IPN)")
+                        await invio.set_status_paid(i.get("id"), "PayPal")
 
     return {"status": "ok"}
 
