@@ -16,6 +16,7 @@ from internetmarke import Internetmarke
 from invio import Invio, InvioDB
 from mail import Mail
 from models import Address
+from ntfy import send_notification
 from paypal import PayPal
 from printer import BrotherMFC, BrotherQL
 from sparkasse import Sparkasse
@@ -285,11 +286,11 @@ async def paypal_ipn_listener(request: Request):
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid IPN signature"
         )
 
-    payment_status = payload.get("payment_status")  # e.g., "Completed"
+    payment_status = payload.get("payment_status")
 
     if payment_status == "Completed":
-        amount = payload.get("mc_gross")  # e.g., "1.00"
-        currency = payload.get("mc_currency")  # e.g., "EUR"
+        amount = payload.get("mc_gross")
+        currency = payload.get("mc_currency")
         first_name = payload.get("first_name", "")
         last_name = payload.get("last_name", "")
         full_name = f"{first_name} {last_name}".strip()
@@ -309,6 +310,12 @@ async def paypal_ipn_listener(request: Request):
                     if inv_num in note:
                         print(f"Match found: {inv_num} via PayPal (IPN)")
                         await invio.set_status_paid(i.get("id"), "PayPal")
+                        await send_notification(
+                            title="PayPal Payment received",
+                            message="Direct Payment Received: {amount} {currency} from {full_name}. Note: {note}",
+                            tags=["💸"],
+                            priority=5,
+                        )
 
     return {"status": "ok"}
 
