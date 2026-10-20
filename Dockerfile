@@ -21,7 +21,7 @@ RUN apk add --no-cache git cups-client
 
 WORKDIR /app
 
-COPY backend/pyproject.toml backend/uv.lock .
+COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./
 
 RUN uv sync --locked
 COPY backend/ .
