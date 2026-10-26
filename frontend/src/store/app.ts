@@ -151,9 +151,11 @@ export const useAppStore = defineStore("app", () => {
     isLoading.value = { id: invoice_id, action: "sendInvoice" };
 
     try {
-      await api.post(`/invoices/email`, { invoice_id });
+      const response = await api.post(`/invoices/email`, { invoice_id });
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
-      if (invoice) {
+      if (response.data.debug) {
+        showToast("Dry run (DEBUG): invoice email NOT sent", "#ffca3a", 5);
+      } else if (invoice) {
         if (invoice.status === "draft") {
           invoice.status = "sent";
         }
