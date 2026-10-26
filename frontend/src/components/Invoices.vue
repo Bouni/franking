@@ -117,31 +117,52 @@
                 </v-btn>
               </template>
 
-              <v-card :title="`Items ${item.invoiceNumber}`">
-                <v-table density="compact">
+              <v-card class="items-popover" elevation="8" min-width="420">
+                <v-card-item>
+                  <v-card-title>{{ item.invoiceNumber }}</v-card-title>
+                  <v-card-subtitle>{{ item.customer?.name }}</v-card-subtitle>
+                </v-card-item>
+
+                <v-divider />
+
+                <v-table>
                   <thead>
                     <tr>
                       <th class="text-end">Qty</th>
-                      <th>Description</th>
-                      <th class="text-end">Unit price</th>
+                      <th>Item</th>
+                      <th class="text-end">Unit</th>
                       <th class="text-end">Total</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    <tr v-for="i in item.items" :key="i.id">
-                      <td class="text-end">{{ i.quantity }}</td>
+                    <tr
+                      v-for="i in item.items"
+                      :key="i.id"
+                      :class="{ 'text-medium-emphasis': !i.productId }"
+                    >
+                      <td class="text-end text-no-wrap">{{ i.quantity }} ×</td>
                       <td>{{ i.description }}</td>
 
-                      <td class="text-end">
+                      <td class="text-end text-no-wrap amount">
                         {{ formatPrice(i.unitPrice) }}
                       </td>
 
-                      <td class="text-end">
+                      <td class="text-end text-no-wrap amount">
                         {{ formatPrice(i.lineTotal) }}
                       </td>
                     </tr>
                   </tbody>
+
+                  <tfoot>
+                    <tr>
+                      <td class="font-weight-bold" colspan="3">Sum</td>
+
+                      <td class="text-end text-no-wrap amount font-weight-bold">
+                        {{ formatPrice(item.subtotal) }}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </v-table>
               </v-card>
             </v-menu>
@@ -387,3 +408,22 @@ onMounted(() => {
   fetchInvoices();
 });
 </script>
+
+<style scoped>
+.items-popover th {
+  font-weight: 600 !important;
+}
+
+.items-popover td,
+.items-popover th {
+  font-size: 0.95rem;
+}
+
+.items-popover .amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.items-popover tfoot td {
+  border-top: 2px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+</style>
