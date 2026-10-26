@@ -172,26 +172,18 @@ def shipping_item(products: list, country: str, quote: dict) -> dict:
 
 
 def find_customer(customers: list, customer: dict) -> dict | None:
-    """Reuse an existing customer only if all address data is identical,
-    so old invoices keep showing the address they were issued for"""
+    """Reuse an existing customer if name and address match (ignoring case),
+    so old invoices keep showing the address they were issued for. Email,
+    phone and contact person don't matter for recognising a customer."""
 
     def norm(value) -> str:
         return str(value or "").strip().lower()
 
     for c in customers:
-        if all(
-            norm(c.get(k)) == norm(customer.get(k))
-            for k in (
-                "name",
-                "contactName",
-                "email",
-                "phone",
-                "address",
-                "postalCode",
-                "city",
-                "region",
-                "countryCode",
-            )
-        ):
+        keys = ["name", "address", "postalCode", "city", "countryCode"]
+        # Only compare the state/province once Invio knows the field
+        if "region" in c:
+            keys.append("region")
+        if all(norm(c.get(k)) == norm(customer.get(k)) for k in keys):
             return c
     return None
