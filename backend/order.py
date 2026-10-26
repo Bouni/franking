@@ -33,7 +33,11 @@ PHONE_RE = re.compile(r"^\+?[0-9 ()/-]{4,30}$")
 
 
 class OrderError(Exception):
-    pass
+    """Validation error, its message is meant to be shown to the user"""
+
+    def __init__(self, msg: str):
+        super().__init__(msg)
+        self.user_message = msg
 
 
 def regions(country_code: str) -> list:

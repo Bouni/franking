@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import textwrap
 from pathlib import Path
 
@@ -43,9 +44,28 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 
+LABEL_DIR = os.path.realpath(LABEL_PATH)
+INVOICE_NUMBER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def label_file(invoice_number: str, suffix: str) -> Path:
+    """Path of a label file. Invoice numbers come from requests, so refuse
+    anything that isn't a plain name or would leave the label folder."""
+    if not INVOICE_NUMBER_RE.match(str(invoice_number)):
+        raise ValueError("Invalid invoice number")
+    path = os.path.normpath(os.path.join(LABEL_DIR, f"{invoice_number}{suffix}"))
+    if not path.startswith(LABEL_DIR + os.sep):
+        raise ValueError("Invalid invoice number")
+    return Path(path)
+
+
 def label_info(invoice_number) -> dict | None:
-    meta = Path(LABEL_PATH) / f"{invoice_number}.json"
-    if not meta.with_suffix(".png").is_file():
+    try:
+        meta = label_file(invoice_number, ".json")
+        png = label_file(invoice_number, ".png")
+    except ValueError:
+        return None
+    if not png.is_file():
         return None
     if meta.is_file():
         return json.loads(meta.read_text())
@@ -288,7 +308,7 @@ async def create_shipping_label(data: dict):
     if DEBUG:
         logging.info("DEBUG active, shipping label dryrun")
         debug_label(
-            label_path / f"{invoice_number}.png",
+            label_file(invoice_number, ".png"),
             printer,
             [invoice_number, code, f"{customer['countryCode']} {weight_g}g"],
         )
@@ -298,11 +318,11 @@ async def create_shipping_label(data: dict):
             async with Sendcloud() as sc:
                 result = await sc.announce(invoice_data, address, code, weight_g)
         except SendcloudError as e:
-            return JSONResponse({"success": False, "msg": str(e)})
-        (label_path / f"{invoice_number}.png").write_bytes(result.pop("label"))
+            return JSONResponse({"success": False, "msg": e.user_message})
+        label_file(invoice_number, ".png").write_bytes(result.pop("label"))
         meta = {"printer": printer, "shipping_option_code": code, **result}
 
-    (label_path / f"{invoice_number}.json").write_text(json.dumps(meta))
+    label_file(invoice_number, ".json").write_text(json.dumps(meta))
     logging.info(f"Shipping label {code} created for {invoice_number}")
     return JSONResponse(
         {"success": True, "msg": f"Shipping label {code} created", "label": meta}
@@ -312,7 +332,10 @@ async def create_shipping_label(data: dict):
 @app.post("/api/shipping/print")
 async def print_shipping(data: dict):
     invoice_number = data.get("invoice_number")
-    label = Path(LABEL_PATH) / f"{invoice_number}.png"
+    try:
+        label = label_file(invoice_number, ".png")
+    except ValueError:
+        return JSONResponse({"success": False, "msg": "Invalid invoice number"})
     meta = label_info(invoice_number)
     if meta is None:
         logging.info(f"No shipping label found for invoice number {invoice_number}")
@@ -334,6 +357,10 @@ async def print_shipping(data: dict):
 @app.post("/api/shipping/cancel")
 async def cancel_shipping(data: dict):
     invoice_number = data.get("invoice_number")
+    try:
+        label_file(invoice_number, ".png")
+    except ValueError:
+        return JSONResponse({"success": False, "msg": "Invalid invoice number"})
     meta = label_info(invoice_number)
     if meta is None:
         return JSONResponse(
@@ -359,16 +386,15 @@ async def cancel_shipping(data: dict):
             msg = result.get("message", "Shipment cancelled")
         except SendcloudError as e:
             # Already cancelled (e.g. in the Sendcloud panel), clean up locally anyway
-            if e.status_code != 409 or "already" not in str(e):
-                return JSONResponse({"success": False, "msg": str(e)})
+            if e.status_code != 409 or "already" not in e.user_message:
+                return JSONResponse({"success": False, "msg": e.user_message})
             msg = "Shipment was already cancelled"
 
     # Keep the cancelled label around, but out of the way
-    label_path = Path(LABEL_PATH)
     for ext in ("png", "json"):
-        f = label_path / f"{invoice_number}.{ext}"
+        f = label_file(invoice_number, f".{ext}")
         if f.is_file():
-            f.rename(label_path / f"{invoice_number}.cancelled.{ext}")
+            f.rename(label_file(invoice_number, f".cancelled.{ext}"))
     logging.info(f"Shipping label for {invoice_number} cancelled: {msg}")
     return JSONResponse({"success": True, "msg": msg})
 
@@ -431,7 +457,9 @@ async def submit_order(data: dict, request: Request):
             values, items = order.validate(data, products)
             quote = await order.shipping_quote(values["country"])
         except order.OrderError as e:
-            return JSONResponse({"success": False, "msg": str(e)}, status_code=400)
+            return JSONResponse(
+                {"success": False, "msg": e.user_message}, status_code=400
+            )
         except (SendcloudError, ValueError) as e:
             logging.error(f"Shipping quote failed: {e}")
             return JSONResponse(
@@ -536,7 +564,7 @@ async def paypal_ipn_listener(request: Request):
     return {"status": "ok"}
 
 
-STATIC_DIR = Path("static").resolve()
+STATIC_DIR = os.path.realpath("static")
 
 app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 
@@ -545,8 +573,8 @@ app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 async def serve_frontend(full_path: str):
     # Serve the file only if it really is inside the static folder, so paths
     # like "../../invio.db" can't read anything else
-    file_path = (STATIC_DIR / full_path).resolve()
-    if file_path.is_relative_to(STATIC_DIR) and file_path.is_file():
+    file_path = os.path.normpath(os.path.join(STATIC_DIR, full_path))
+    if file_path.startswith(STATIC_DIR + os.sep) and os.path.isfile(file_path):
         return FileResponse(file_path)
     # Otherwise, return index.html to let Vue Router handle it
     return FileResponse("static/index.html")
