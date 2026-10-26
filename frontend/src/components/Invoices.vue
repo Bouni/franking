@@ -210,7 +210,7 @@
                 <ActionButton
                   action="sendInvoice"
                   :action-id="item.id"
-                  color="lime-accent-3"
+                  color="#1982c4"
                   :disabled="item.customer.email === ''"
                   icon="mdi-email-fast"
                   tooltip="Send invoice as e-mail"
@@ -220,10 +220,11 @@
                 <ActionButton
                   action="printInvoice"
                   :action-id="item.id"
-                  color="red"
+                  color="#1982c4"
                   :disabled="item.status !== 'paid'"
                   icon="mdi-printer-outline"
                   tooltip="Print invoice"
+                  variant="tonal"
                   @click="printInvoice(item.id)"
                 />
               </div>
@@ -248,6 +249,7 @@
                       onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
                     },
                   ]"
+                  color="#8ac926"
                   :disabled="item.status !== 'sent'"
                 />
               </div>
@@ -265,7 +267,7 @@
                 <ActionButton
                   action="printLabel"
                   :action-id="item.invoiceNumber"
-                  color="purple"
+                  color="blue-grey-darken-2"
                   :disabled="!item.label"
                   icon="mdi-printer"
                   :tooltip="
@@ -273,18 +275,20 @@
                       ? `Print shipping label (${printerNames[item.label.printer] ?? item.label.printer})`
                       : 'Print shipping label'
                   "
+                  variant="tonal"
                   @click="printLabel(item.invoiceNumber)"
                 />
 
                 <ActionButton
                   action="cancelLabel"
                   :action-id="item.invoiceNumber"
-                  color="red-darken-2"
+                  color="#ff595e"
                   :disabled="
                     !item.label || item.label.carrier === 'internetmarke'
                   "
                   icon="mdi-cancel"
                   tooltip="Cancel shipping label"
+                  variant="tonal"
                   @click="confirmCancelLabel(item.invoiceNumber)"
                 />
 
@@ -293,11 +297,12 @@
                     <v-btn
                       v-bind="tooltipProps"
                       class="ma-1"
-                      color="blue-grey"
+                      color="blue-grey-darken-2"
                       :disabled="!item.label?.tracking_url"
                       :href="item.label?.tracking_url"
                       icon="mdi-truck-fast"
                       target="_blank"
+                      variant="tonal"
                     />
                   </template>
                 </v-tooltip>
@@ -310,7 +315,7 @@
                 <ActionButton
                   action="markInvoiceComplete"
                   :action-id="item.id"
-                  color="lime-accent-3"
+                  color="#7209b7"
                   :disabled="item.status !== 'paid'"
                   icon="mdi-check"
                   tooltip="Mark as complete"

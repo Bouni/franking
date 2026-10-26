@@ -9,6 +9,7 @@ defineProps<{
   action: LoadingState["action"];
   actionId: string | number;
   disabled?: boolean;
+  variant?: "flat" | "tonal" | "outlined" | "text";
 }>();
 
 const emit = defineEmits(["click"]);
@@ -27,6 +28,7 @@ const { isLoading } = storeToRefs(store);
         :disabled="disabled"
         :icon="icon"
         :loading="isLoading?.action === action && isLoading?.id === actionId"
+        :variant="variant ?? 'flat'"
         @click="emit('click')"
       />
     </template>
