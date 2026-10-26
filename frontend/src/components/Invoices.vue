@@ -260,7 +260,7 @@
               <div class="action-group">
                 <ShippingButton
                   :country-code="item.customer.countryCode"
-                  :disabled="!!item.label"
+                  :disabled="!!item.label || item.status !== 'paid'"
                   :invoice-id="item.id"
                 />
 
