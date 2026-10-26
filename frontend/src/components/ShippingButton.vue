@@ -2,7 +2,6 @@
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
 import dhlIcon from "@/assets/DHL.svg";
-import postIcon from "@/assets/Post.svg";
 import { useAppStore } from "@/store/app";
 
 const props = defineProps<{
@@ -11,7 +10,7 @@ const props = defineProps<{
   disabled?: boolean;
 }>();
 
-// Internetmarke (Deutsche Post) within Germany, DHL Warenpost International otherwise
+// DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
 const national = computed(() => props.countryCode?.toUpperCase() === "DE");
 
 const store = useAppStore();
@@ -24,7 +23,7 @@ const { createLabel } = store;
     location="top"
     :text="
       national
-        ? 'Purchase Internetmarke (Deutsche Post)'
+        ? 'Purchase DHL Kleinpaket'
         : 'Purchase DHL Warenpost International Premium'
     "
   >
@@ -40,11 +39,7 @@ const { createLabel } = store;
         "
         @click="createLabel(invoiceId)"
       >
-        <v-img
-          :alt="national ? 'Deutsche Post' : 'DHL'"
-          :src="national ? postIcon : dhlIcon"
-          :width="national ? 28 : 34"
-        />
+        <v-img alt="DHL" :src="dhlIcon" width="34" />
       </v-btn>
     </template>
   </v-tooltip>

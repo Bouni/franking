@@ -6,12 +6,12 @@ from pathlib import Path
 
 import anyio
 import httpx
-import pycountry
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+import order
 from internetmarke import Internetmarke
 from invio import Invio, InvioDB
 from mail import Mail
@@ -21,10 +21,9 @@ from paypal import PayPal
 from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
 from sendcloud import (
     SENDCLOUD_DEFAULT_WEIGHT_G,
-    SENDCLOUD_OPTION_INTERNATIONAL,
     Sendcloud,
     SendcloudError,
-    alpha_2,
+    shipping_option,
 )
 from sparkasse import Sparkasse
 
@@ -41,13 +40,6 @@ BASE_PATH = Path(__file__).resolve().parent.parent
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-
-
-# Within Germany an Internetmarke (Großbrief) is bought directly via python-inema
-# (Sendcloud's Deutsche Post integration requires a paid plan), international
-# shipments go out as DHL Warenpost International Premium via Sendcloud
-INTERNETMARKE_PRODUCT = 21
-INTERNETMARKE_CODE = f"internetmarke:{INTERNETMARKE_PRODUCT}"
 
 
 def label_info(invoice_number) -> dict | None:
@@ -216,8 +208,8 @@ async def create_shipping_label(data: dict):
     invoice_data = await load_invoice(data.get("invoice_id", ""))
     customer = invoice_data["customer"]
     invoice_number = invoice_data["invoiceNumber"]
-    national = alpha_2(customer["countryCode"]) == "DE"
-    code = INTERNETMARKE_CODE if national else SENDCLOUD_OPTION_INTERNATIONAL
+    # DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
+    code = shipping_option(customer["countryCode"])
     weight_g = SENDCLOUD_DEFAULT_WEIGHT_G
 
     # The label is bought for the default weight, make sure the goods fit
@@ -255,8 +247,9 @@ async def create_shipping_label(data: dict):
         email=customer.get("email") or "",
     )
 
-    # Internetmarke goes to the QL-710W, everything else (Warenpost) to the QL-1110NWB
-    printer = "ql710" if national else "ql1110"
+    # All Sendcloud labels are 103x164 for the QL-1110NWB. Older Internetmarken
+    # keep "ql710" in their metadata and still print there.
+    printer = "ql1110"
 
     if DEBUG:
         logging.info("DEBUG active, shipping label dryrun")
@@ -266,33 +259,6 @@ async def create_shipping_label(data: dict):
             [invoice_number, code, f"{customer['countryCode']} {weight_g}g"],
         )
         meta = {"printer": printer, "carrier": "debug", "shipping_option_code": code}
-    elif national:
-        # inema wants alpha-3 country codes, no phone number on letters
-        im_address = address.model_copy(
-            update={
-                "country": pycountry.countries.get(
-                    alpha_2=alpha_2(address.country)
-                ).alpha_3,
-                "phone": None,
-            }
-        )
-        im = Internetmarke()
-        await anyio.to_thread.run_sync(
-            im.order,
-            label_path,
-            invoice_number,
-            im_address,
-            INTERNETMARKE_PRODUCT,
-        )
-        if not (label_path / f"{invoice_number}.png").is_file():
-            return JSONResponse(
-                {"success": False, "msg": "Internetmarke purchase failed"}
-            )
-        meta = {
-            "printer": printer,
-            "carrier": "internetmarke",
-            "shipping_option_code": code,
-        }
     else:
         try:
             async with Sendcloud() as sc:
@@ -394,6 +360,90 @@ async def get_products():
             for p in products
         ]
         return products
+
+
+@app.get("/api/order/shipping")
+async def order_shipping(country: str):
+    try:
+        quote = await order.shipping_quote(country)
+    except (SendcloudError, ValueError) as e:
+        logging.error(f"Shipping quote for {country} failed: {e}")
+        return JSONResponse({"success": False, "msg": "No shipping price available"})
+    return JSONResponse(
+        {"success": True, "name": quote["name"], "price": quote["price_rounded"]}
+    )
+
+
+@app.post("/api/order/submit")
+async def submit_order(data: dict, request: Request):
+    # Bots fill in the hidden "website" field, pretend everything worked
+    if data.get("website"):
+        logging.info("Order dropped by honeypot")
+        return JSONResponse({"success": True})
+
+    client_ip = (
+        request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or request.client.host
+    )
+    if order.rate_limited(client_ip):
+        logging.info(f"Order rate limit hit by {client_ip}")
+        return JSONResponse(
+            {"success": False, "msg": "Too many orders, please try again later."},
+            status_code=429,
+        )
+
+    async with await Invio.create() as invio:
+        products = await invio.get_products()
+        try:
+            values, items = order.validate(data, products)
+            quote = await order.shipping_quote(values["country"])
+        except order.OrderError as e:
+            return JSONResponse({"success": False, "msg": str(e)}, status_code=400)
+        except (SendcloudError, ValueError) as e:
+            logging.error(f"Shipping quote failed: {e}")
+            return JSONResponse(
+                {"success": False, "msg": "Could not calculate the shipping costs."},
+                status_code=502,
+            )
+
+        items.append(
+            order.shipping_item(products, values["country"], quote["price_rounded"])
+        )
+        customer_data = {
+            "name": f"{values['firstname']} {values['lastname']}",
+            "email": values["email"],
+            "address": values["address"],
+            "postalCode": values["postalcode"],
+            "city": values["city"],
+            "countryCode": values["country"],
+        }
+        total = sum(i["unitPrice"] * i["quantity"] for i in items)
+        summary = "\n".join(f"{i['quantity']} x {i['description']}" for i in items)
+
+        if DEBUG:
+            logging.info(f"DEBUG active, no invoice created: {customer_data} {items}")
+            return JSONResponse({"success": True, "debug": True, "total": total})
+
+        customer = order.find_customer(await invio.get_customers(), customer_data)
+        if customer is None:
+            customer = await invio.create_customer(customer_data)
+        invoice = await invio.create_invoice(
+            {"customerId": customer["id"], "status": "draft", "items": items}
+        )
+
+    logging.info(f"Order {invoice.get('invoiceNumber')} from {customer_data['email']}")
+    try:
+        await send_notification(
+            title=f"New order {invoice.get('invoiceNumber')}",
+            message=f"{customer_data['name']} ({customer_data['countryCode']}), "
+            f"{total:.2f} EUR\n{summary}",
+            tags=["package"],
+            priority=4,
+        )
+    except Exception as e:  # noqa: BLE001 - the order itself already worked
+        logging.error(f"ntfy notification failed: {e}")
+
+    return JSONResponse({"success": True, "total": total})
 
 
 @app.post("/paypal/ipn")

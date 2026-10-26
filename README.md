@@ -4,12 +4,12 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
 
 - send invoice as an email attachment and mark invoice as sent
 - mark invoice as paid
-- create shipping labels
-  - Deutsche Post [Internetmarke](https://shop.deutschepost.de/internetmarke) (Großbrief) for shipments within Germany
-  - DHL Warenpost International Premium (with tracking) via [Sendcloud](https://www.sendcloud.com/) for international shipments
+- public order form (order.bouni.de) that creates a draft invoice in Invio, including shipping costs from Sendcloud rounded up to the next full euro
+- create shipping labels via [Sendcloud](https://www.sendcloud.com/)
+  - DHL Kleinpaket for shipments within Germany
+  - DHL Warenpost International Premium (with tracking) for international shipments
   - the default method can be overridden per invoice
-- print the Internetmarke on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w) (38mm endless)
-- print the Warenpost label on a Brother QL-1110NWB (DK-11247, 103x164mm)
+- print the DHL labels on a Brother QL-1110NWB (DK-11247, 103x164mm); older Internetmarken still print on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w) (38mm endless)
 - print the invoice on paper
 - Integration with PayPal and Sparkasse (via FinTS) to fetch the latest payment data and update the payment status with that data
 

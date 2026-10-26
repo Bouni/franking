@@ -35,7 +35,38 @@
       </v-row>
     </v-sheet>
 
-    <v-form ref="form" v-model="isFormValid" @submit.prevent="handleSubmit">
+    <v-alert
+      v-if="submitted"
+      class="mb-6"
+      icon="mdi-check-circle"
+      prominent
+      rounded="lg"
+      title="Thank you for your order!"
+      type="success"
+      variant="tonal"
+    >
+      I'll check if I have boards available and send you an invoice by email to
+      <strong>{{ order.email }}</strong
+      >.
+    </v-alert>
+
+    <v-form
+      v-else
+      ref="form"
+      v-model="isFormValid"
+      @submit.prevent="handleSubmit"
+    >
+      <!-- Honeypot for bots, hidden from humans -->
+      <input
+        v-model="website"
+        aria-hidden="true"
+        autocomplete="off"
+        class="honeypot"
+        name="website"
+        tabindex="-1"
+        type="text"
+      />
+
       <v-row>
         <v-col cols="12" lg="8">
           <!-- Items -->
@@ -49,13 +80,18 @@
             </v-card-item>
 
             <v-card-text>
+              <v-alert
+                v-if="orderStore.productsError"
+                class="mb-4"
+                density="compact"
+                type="error"
+                variant="tonal"
+              >
+                The items could not be loaded, please try again later.
+              </v-alert>
+
               <v-row>
-                <v-col
-                  v-for="item in order.items"
-                  :key="item.article_number"
-                  cols="12"
-                  sm="6"
-                >
+                <v-col v-for="item in items" :key="item.id" cols="12" sm="6">
                   <v-card
                     class="product h-100"
                     :class="{ 'product--selected': item.quantity > 0 }"
@@ -74,13 +110,13 @@
                       }}</v-card-title>
 
                       <v-card-subtitle>
-                        {{ formatPrice(item.price) }} each
+                        {{ formatPrice(item.unitPrice) }} each
                       </v-card-subtitle>
                     </v-card-item>
 
                     <v-card-actions class="px-4 pb-4">
                       <v-number-input
-                        v-model="item.quantity"
+                        v-model="quantities[item.id]"
                         control-variant="split"
                         density="compact"
                         hide-details
@@ -94,7 +130,7 @@
                       <v-spacer />
 
                       <span class="text-h6 font-weight-bold">
-                        {{ formatPrice(item.price * item.quantity) }}
+                        {{ formatPrice(item.unitPrice * item.quantity) }}
                       </span>
                     </v-card-actions>
                   </v-card>
@@ -258,13 +294,46 @@
 
               <div
                 v-for="item in selectedItems"
-                :key="item.article_number"
+                :key="item.id"
                 class="d-flex justify-space-between py-1"
               >
                 <span>{{ item.quantity }} × {{ item.name }}</span>
 
                 <span class="amount">
-                  {{ formatPrice(item.price * item.quantity) }}
+                  {{ formatPrice(item.unitPrice * item.quantity) }}
+                </span>
+              </div>
+            </v-card-text>
+
+            <v-divider />
+
+            <v-card-text>
+              <div class="d-flex justify-space-between py-1">
+                <span>Items</span>
+                <span class="amount">{{ formatPrice(subtotal) }}</span>
+              </div>
+
+              <div class="d-flex justify-space-between py-1">
+                <span>
+                  Shipping
+                  <span v-if="shipping" class="text-medium-emphasis">
+                    ({{ shipping.name }})
+                  </span>
+                </span>
+
+                <v-progress-circular
+                  v-if="shippingLoading"
+                  indeterminate
+                  size="16"
+                  width="2"
+                />
+
+                <span v-else-if="shipping" class="amount">
+                  {{ formatPrice(shipping.price) }}
+                </span>
+
+                <span v-else class="text-medium-emphasis">
+                  {{ order.country ? "not available" : "select country" }}
                 </span>
               </div>
             </v-card-text>
@@ -274,18 +343,29 @@
             <v-card-text
               class="d-flex justify-space-between align-center text-h6"
             >
-              <span>Sum</span>
+              <span>Total</span>
 
               <span class="amount font-weight-bold">
-                {{ formatPrice(subtotal) }}
+                {{ formatPrice(total) }}
               </span>
             </v-card-text>
 
             <v-card-actions class="px-4 pb-4 flex-column align-stretch">
+              <v-alert
+                v-if="submitError"
+                class="mb-3"
+                density="compact"
+                type="error"
+                variant="tonal"
+              >
+                {{ submitError }}
+              </v-alert>
+
               <v-btn
                 block
                 color="primary"
-                :disabled="selectedItems.length === 0"
+                :disabled="selectedItems.length === 0 || !shipping"
+                :loading="submitting"
                 prepend-icon="mdi-send"
                 size="large"
                 type="submit"
@@ -323,14 +403,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { COUNTRIES } from "@/constants/countries";
-import { useOrderStore } from "@/store/order";
+import { type Shipping, useOrderStore } from "@/store/order";
 
 const orderStore = useOrderStore();
 
 const form = ref(null);
 const isFormValid = ref(false);
+const submitting = ref(false);
+const submitError = ref<string | null>(null);
+const submitted = ref(false);
 
 const steps = [
   {
@@ -380,48 +463,67 @@ const order = ref({
   city: "",
   postalcode: "",
   country: "",
-  items: [
-    {
-      name: "BSH Board",
-      article_number: "1",
-      price: 15,
-      quantity: 0,
-      icon: "mdi-chip",
-    },
-    {
-      name: "RAST Connector 3-pin",
-      article_number: "2",
-      price: 1,
-      quantity: 0,
-      icon: "mdi-connection",
-    },
-    {
-      name: "RAST Connector 4-pin",
-      article_number: "3",
-      price: 1,
-      quantity: 0,
-      icon: "mdi-connection",
-    },
-    {
-      name: "BSH Board Case",
-      article_number: "4",
-      price: 10,
-      quantity: 0,
-      icon: "mdi-package-variant-closed",
-    },
-  ],
 });
+const website = ref("");
 
-const selectedItems = computed(() =>
-  order.value.items.filter((item) => item.quantity > 0),
+// Items and prices come from Invio
+const quantities = ref<Record<string, number>>({});
+
+function iconFor(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes("case")) return "mdi-package-variant-closed";
+  if (n.includes("stecker") || n.includes("connector")) return "mdi-connection";
+  return "mdi-chip";
+}
+
+const items = computed(() =>
+  orderStore.products
+    .filter((p) => p.category === "goods")
+    .map((p) => ({
+      ...p,
+      icon: iconFor(p.name),
+      quantity: quantities.value[p.id] ?? 0,
+    })),
 );
 
-// Calculate subtotal for items only
-const subtotal = computed(() => {
-  return order.value.items.reduce((sum, item) => {
-    return sum + item.price * item.quantity;
-  }, 0);
-});
+const selectedItems = computed(() =>
+  items.value.filter((item) => item.quantity > 0),
+);
+
+const subtotal = computed(() =>
+  selectedItems.value.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0,
+  ),
+);
+
+// Start every product at 0 so the -/+ buttons work right away
+watch(
+  () => orderStore.products,
+  (products) => {
+    for (const p of products) {
+      quantities.value[p.id] ??= 0;
+    }
+  },
+  { immediate: true },
+);
+
+// Shipping costs depend on the destination country
+const shipping = ref<Shipping | null>(null);
+const shippingLoading = ref(false);
+
+watch(
+  () => order.value.country,
+  async (country) => {
+    shipping.value = null;
+    if (!country) return;
+    shippingLoading.value = true;
+    shipping.value = await orderStore.fetchShipping(country);
+    shippingLoading.value = false;
+  },
+);
+
+const total = computed(() => subtotal.value + (shipping.value?.price ?? 0));
 
 function formatPrice(value: number) {
   return `${value.toFixed(2)} €`;
@@ -446,7 +548,21 @@ async function handleSubmit() {
 
   if (!valid) return;
 
-  console.log("Order submitted successfully:", order);
+  submitting.value = true;
+  submitError.value = null;
+  submitError.value = await orderStore.submitOrder({
+    ...order.value,
+    website: website.value,
+    items: selectedItems.value.map((item) => ({
+      productId: item.id,
+      quantity: item.quantity,
+    })),
+  });
+  submitting.value = false;
+  if (!submitError.value) {
+    submitted.value = true;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 onMounted(() => {
@@ -487,6 +603,14 @@ onMounted(() => {
 .product--selected {
   border-color: rgb(var(--v-theme-primary));
   box-shadow: 0 0 0 1px rgb(var(--v-theme-primary));
+}
+
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 .amount {
