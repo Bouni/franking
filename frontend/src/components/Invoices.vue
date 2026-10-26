@@ -155,24 +155,43 @@
             <!--   @click="markInvoicePaid(item.id)" -->
             <!-- /> -->
 
-            <ActionButton
-              icon="mdi-postage-stamp"
-              color="blue-darken-1"
-              tooltip="Purchase Internetmarke"
-              action="purchaseInternetmarke"
-              :action-id="item.id"
-              :disabled="item.internetmarke"
-              @click="purchaseInternetmarke(item.id)"
+            <ShippingButton
+              :invoice-id="item.id"
+              :country-code="item.customer.countryCode"
+              :disabled="!!item.label"
             />
 
             <ActionButton
               icon="mdi-printer"
               color="purple"
-              tooltip="Print Internetmarke"
-              action="printInternetmarke"
+              :tooltip="
+                item.label
+                  ? `Print shipping label (${printerNames[item.label.printer] ?? item.label.printer})`
+                  : 'Print shipping label'
+              "
+              action="printLabel"
               :action-id="item.invoiceNumber"
-              :disabled="!item.internetmarke"
-              @click="printInternetmarke(item.invoiceNumber)"
+              :disabled="!item.label"
+              @click="printLabel(item.invoiceNumber)"
+            />
+
+            <ActionButton
+              icon="mdi-cancel"
+              color="red-darken-2"
+              tooltip="Cancel shipping label"
+              action="cancelLabel"
+              :action-id="item.invoiceNumber"
+              :disabled="!item.label || item.label.carrier === 'internetmarke'"
+              @click="confirmCancelLabel(item.invoiceNumber)"
+            />
+
+            <v-btn
+              v-if="item.label?.tracking_url"
+              icon="mdi-truck-fast"
+              variant="text"
+              size="small"
+              :href="item.label.tracking_url"
+              target="_blank"
             />
 
             <ActionButton
@@ -205,6 +224,7 @@
 import Internetmarke from "@/components/Internetmarke.vue";
 import ActionButton from "@/components/ActionButton.vue";
 import SpeedDialButton from "@/components/SpeedDialButton.vue";
+import ShippingButton from "@/components/ShippingButton.vue";
 import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
 import { onMounted, computed, ref } from "vue";
@@ -214,8 +234,8 @@ import sparkasseIcon from "@/assets/Sparkasse.svg";
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
 const {
-  printInternetmarke,
-  purchaseInternetmarke,
+  printLabel,
+  cancelLabel,
   markInvoicePaid,
   markInvoiceComplete,
   fetchInvoices,
@@ -233,6 +253,17 @@ const status_colors = {
   paid: "#8ac926",
   voided: "#8da9c4",
 } as const;
+
+const printerNames: Record<string, string> = {
+  ql710: "QL-710W",
+  ql1110: "QL-1110NWB",
+};
+
+function confirmCancelLabel(invoice_number: string) {
+  if (window.confirm(`Cancel the shipping label for ${invoice_number}?`)) {
+    cancelLabel(invoice_number);
+  }
+}
 
 const selectedStates = ref(["draft", "sent", "paid"]);
 

@@ -13,8 +13,9 @@ export interface LoadingState {
     | "markInvoiceComplete"
     | "printInvoice"
     | "sendInvoice"
-    | "printInternetmarke"
-    | "purchaseInternetmarke"
+    | "printLabel"
+    | "createLabel"
+    | "cancelLabel"
     | "updatePayments";
 }
 
@@ -172,16 +173,17 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  async function printInternetmarke(invoice_number: string) {
-    isLoading.value = { id: invoice_number, action: "printInternetmarke" };
+  async function printLabel(invoice_number: string) {
+    isLoading.value = { id: invoice_number, action: "printLabel" };
     try {
-      const response = await api.post("/internetmarke/print", {
+      const response = await api.post("/shipping/print", {
         invoice_number: invoice_number,
       });
-      showToast("Internetmarke successfully printed!", "#8ac926", 3);
+      if (!response.data.success) throw new Error(response.data.msg);
+      showToast("Shipping label successfully printed!", "#8ac926", 3);
     } catch (err: any) {
       showToast(
-        `Error printing Internetmarke: ${err.message || "Error printing Internetmarke"}`,
+        `Error printing shipping label: ${err.message || "Error printing shipping label"}`,
         "#ff595e",
         10,
       );
@@ -190,19 +192,18 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  async function purchaseInternetmarke(invoice_id: string) {
-    isLoading.value = { id: invoice_id, action: "purchaseInternetmarke" };
+  async function createLabel(invoice_id: string) {
+    isLoading.value = { id: invoice_id, action: "createLabel" };
 
     try {
+      const response = await api.post("/shipping/label", {
+        invoice_id: invoice_id,
+      });
+      if (!response.data.success) throw new Error(response.data.msg);
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
-      const data = {
-        ...invoice.customer,
-        invoiceNumber: invoice.invoiceNumber,
-      };
-      const response = await api.post("/internetmarke/purchase", data);
       if (invoice) {
-        invoice.internetmarke = true;
-        showToast("Internetmarke successfully purchased!", "#8ac926", 3);
+        invoice.label = response.data.label;
+        showToast("Shipping label successfully created!", "#8ac926", 3);
       } else {
         showToast("Invoice not found", "#ff595e", 10);
       }
@@ -210,7 +211,30 @@ export const useAppStore = defineStore("app", () => {
       internetmarke.value = response2.data;
     } catch (err: any) {
       showToast(
-        `Error purchasing Internetmarke: ${err.message || "Error purchasing Internetmarke"}`,
+        `Error creating shipping label: ${err.message || "Error creating shipping label"}`,
+        "#ff595e",
+        10,
+      );
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
+  async function cancelLabel(invoice_number: string) {
+    isLoading.value = { id: invoice_number, action: "cancelLabel" };
+    try {
+      const response = await api.post("/shipping/cancel", {
+        invoice_number: invoice_number,
+      });
+      if (!response.data.success) throw new Error(response.data.msg);
+      const invoice = invoices.value.find(
+        (inv) => inv.invoiceNumber === invoice_number,
+      );
+      if (invoice) invoice.label = null;
+      showToast(response.data.msg, "#8ac926", 5);
+    } catch (err: any) {
+      showToast(
+        `Error cancelling shipping label: ${err.message || "Error cancelling shipping label"}`,
         "#ff595e",
         10,
       );
@@ -251,8 +275,9 @@ export const useAppStore = defineStore("app", () => {
     fetchInvoices,
     markInvoicePaid,
     markInvoiceComplete,
-    printInternetmarke,
-    purchaseInternetmarke,
+    printLabel,
+    createLabel,
+    cancelLabel,
     printInvoice,
     sendInvoice,
     updatePayments,

@@ -1,3 +1,4 @@
 import vuetify from "eslint-config-vuetify";
 
-export default vuetify();
+// Formatting is handled by Prettier
+export default vuetify({ stylistic: false });

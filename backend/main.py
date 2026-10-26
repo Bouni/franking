@@ -18,7 +18,14 @@ from mail import Mail
 from models import Address
 from ntfy import send_notification
 from paypal import PayPal
-from printer import BrotherMFC, BrotherQL
+from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
+from sendcloud import (
+    SENDCLOUD_DEFAULT_WEIGHT_G,
+    SENDCLOUD_OPTION_INTERNATIONAL,
+    Sendcloud,
+    SendcloudError,
+    alpha_2,
+)
 from sparkasse import Sparkasse
 
 load_dotenv()
@@ -34,6 +41,23 @@ BASE_PATH = Path(__file__).resolve().parent.parent
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
+
+
+# Within Germany an Internetmarke (Großbrief) is bought directly via python-inema
+# (Sendcloud's Deutsche Post integration requires a paid plan), international
+# shipments go out as DHL Warenpost International Premium via Sendcloud
+INTERNETMARKE_PRODUCT = 21
+INTERNETMARKE_CODE = f"internetmarke:{INTERNETMARKE_PRODUCT}"
+
+
+def label_info(invoice_number) -> dict | None:
+    meta = Path(LABEL_PATH) / f"{invoice_number}.json"
+    if not meta.with_suffix(".png").is_file():
+        return None
+    if meta.is_file():
+        return json.loads(meta.read_text())
+    # Internetmarke purchased before labels had metadata
+    return {"printer": "ql710", "carrier": "internetmarke"}
 
 
 @app.get("/api/payments/check")
@@ -94,8 +118,7 @@ async def get_invoice(invoice_id: str):
 
         invoice_data["customer"] = customer_data
 
-        im = Path(LABEL_PATH) / f"{invoice_data.get('invoiceNumber')}.png"
-        invoice_data["internetmarke"] = im.is_file()
+        invoice_data["label"] = label_info(invoice_data.get("invoiceNumber"))
 
         return invoice_data
 
@@ -105,6 +128,8 @@ async def invoices():
     async with InvioDB() as db:
         rows = await db.query_invoices()
         invoices = [json.loads(r["invoice_json"]) for r in rows]
+        for i in invoices:
+            i["label"] = label_info(i.get("invoiceNumber"))
         invoices.sort(key=lambda x: x.get("invoiceNumber", 0), reverse=True)
         return {"invoices": invoices}
 
@@ -127,7 +152,7 @@ async def mark_invoice_complete(data: dict):
 async def print_invoice(data: dict):
     async with await Invio.create() as invio:
         invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
-    printer = BrotherMFC("192.168.88.21")
+    printer = BrotherMFC(MFC_IP)
     await anyio.to_thread.run_sync(printer.print, invoice_pdf)
     return JSONResponse({"success": True})
 
@@ -175,71 +200,175 @@ async def internetmarke_balance():
     return JSONResponse({"balance": im.get_balance()})
 
 
-@app.post("/api/internetmarke/purchase")
-def purchase_internetmarke(data: dict):
-    if code := pycountry.countries.get(alpha_2=data["countryCode"].upper()):
-        data["countryCode"] = code.alpha_3
-    else:
-        return JSONResponse({"success": False, "msg": "Failed to convert contry code"})
+async def load_invoice(invoice_id: str) -> dict:
+    async with await Invio.create() as invio:
+        invoice_data = await invio.get_invoice_data(invoice_id)
+        invoice_data["customer"] = await invio.get_customer_data(
+            invoice_data.get("customerId")
+        )
+    return invoice_data
 
-    # create address from data
-    address = Address(
-        name=data["name"],
-        address=data["address"],
-        city=data["city"],
-        postcode=data["postalCode"],
-        country=data["countryCode"],
-        extra=data.get("phone"),
+
+@app.post("/api/shipping/label")
+async def create_shipping_label(data: dict):
+    invoice_data = await load_invoice(data.get("invoice_id", ""))
+    customer = invoice_data["customer"]
+    invoice_number = invoice_data["invoiceNumber"]
+    national = alpha_2(customer["countryCode"]) == "DE"
+    code = INTERNETMARKE_CODE if national else SENDCLOUD_OPTION_INTERNATIONAL
+    weight_g = SENDCLOUD_DEFAULT_WEIGHT_G
+
+    # The label is bought for the default weight, make sure the goods fit
+    items_g = sum(
+        (i.get("weightG") or 0) * (i.get("quantity") or 0)
+        for i in invoice_data.get("items", [])
     )
+    if items_g > weight_g:
+        logging.info(
+            f"{invoice_number}: items weigh {items_g:g}g, more than {weight_g}g"
+        )
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": f"Items weigh {items_g:g} g, which exceeds the label "
+                f"weight of {weight_g} g (SENDCLOUD_DEFAULT_WEIGHT_G). "
+                "No label was purchased.",
+            }
+        )
 
-    if not Path(LABEL_PATH).is_dir():
+    label_path = Path(LABEL_PATH)
+    if not label_path.is_dir():
         logging.error(f"Label path {LABEL_PATH} is not a directory")
         return JSONResponse(
             {"success": False, "msg": f"Label path ({LABEL_PATH}) does not exist!"}
         )
 
+    address = Address(
+        name=customer["name"],
+        address=customer["address"],
+        city=customer["city"],
+        postcode=customer["postalCode"],
+        country=customer["countryCode"],
+        phone=customer.get("phone"),
+        email=customer.get("email") or "",
+    )
+
+    # Internetmarke goes to the QL-710W, everything else (Warenpost) to the QL-1110NWB
+    printer = "ql710" if national else "ql1110"
+
     if DEBUG:
-        logging.info("DEBUG active, Internetmarke dryrun")
-        return JSONResponse(
-            {"success": True, "msg": "Debug mode active, no Internetmarke purchased"}
+        logging.info("DEBUG active, shipping label dryrun")
+        debug_label(
+            label_path / f"{invoice_number}.png",
+            printer,
+            [invoice_number, code, f"{customer['countryCode']} {weight_g}g"],
         )
-
-    if data["countryCode"] == "DEU":
-        product_code = 21
-        product_type = "Grossbrief national"
+        meta = {"printer": printer, "carrier": "debug", "shipping_option_code": code}
+    elif national:
+        # inema wants alpha-3 country codes, no phone number on letters
+        im_address = address.model_copy(
+            update={
+                "country": pycountry.countries.get(
+                    alpha_2=alpha_2(address.country)
+                ).alpha_3,
+                "phone": None,
+            }
+        )
+        im = Internetmarke()
+        await anyio.to_thread.run_sync(
+            im.order,
+            label_path,
+            invoice_number,
+            im_address,
+            INTERNETMARKE_PRODUCT,
+        )
+        if not (label_path / f"{invoice_number}.png").is_file():
+            return JSONResponse(
+                {"success": False, "msg": "Internetmarke purchase failed"}
+            )
+        meta = {
+            "printer": printer,
+            "carrier": "internetmarke",
+            "shipping_option_code": code,
+        }
     else:
-        product_code = 10051
-        product_type = "Grossbrief international"
-    logging.info(f"Internetmarke {product_type} purchased")
-    im = Internetmarke()
-    im.order(
-        Path(LABEL_PATH), data["invoiceNumber"], address, product_code, dryrun=DEBUG
-    )
+        try:
+            async with Sendcloud() as sc:
+                result = await sc.announce(invoice_data, address, code, weight_g)
+        except SendcloudError as e:
+            return JSONResponse({"success": False, "msg": str(e)})
+        (label_path / f"{invoice_number}.png").write_bytes(result.pop("label"))
+        meta = {"printer": printer, "shipping_option_code": code, **result}
+
+    (label_path / f"{invoice_number}.json").write_text(json.dumps(meta))
+    logging.info(f"Shipping label {code} created for {invoice_number}")
     return JSONResponse(
-        {"success": True, "msg": f"Internetmarke {product_type} purchased"}
+        {"success": True, "msg": f"Shipping label {code} created", "label": meta}
     )
 
 
-@app.post("/api/internetmarke/print")
-async def print_internetmarke(data: dict):
-    ql = BrotherQL()
+@app.post("/api/shipping/print")
+async def print_shipping(data: dict):
     invoice_number = data.get("invoice_number")
     label = Path(LABEL_PATH) / f"{invoice_number}.png"
-    if not label.is_file():
-        logging.info(f"No Internetmarke found for invoice number {invoice_number}")
+    meta = label_info(invoice_number)
+    if meta is None:
+        logging.info(f"No shipping label found for invoice number {invoice_number}")
         return JSONResponse(
             {
                 "success": False,
-                "msg": "No Internetmarke found for invoice number {invoice_number}",
+                "msg": f"No shipping label found for invoice number {invoice_number}",
             }
         )
-    result = ql.print_label(label)
+    result = await anyio.to_thread.run_sync(
+        print_shipping_label, label, meta["printer"]
+    )
     if result:
-        logging.info("Internetmarke purchased")
-        return JSONResponse({"success": True, "msg": "Internetmarke printed"})
-    else:
-        logging.info("Printing failed")
-        return JSONResponse({"success": False, "msg": "Printing failed"})
+        return JSONResponse({"success": True, "msg": "Shipping label printed"})
+    logging.info("Printing failed")
+    return JSONResponse({"success": False, "msg": "Printing failed"})
+
+
+@app.post("/api/shipping/cancel")
+async def cancel_shipping(data: dict):
+    invoice_number = data.get("invoice_number")
+    meta = label_info(invoice_number)
+    if meta is None:
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": f"No shipping label found for invoice number {invoice_number}",
+            }
+        )
+    if meta.get("carrier") == "internetmarke":
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": "Internetmarken can't be cancelled here, "
+                "request a refund in the Portokasse",
+            }
+        )
+
+    msg = "Debug label removed"
+    if shipment_id := meta.get("shipment_id"):
+        try:
+            async with Sendcloud() as sc:
+                result = await sc.cancel(shipment_id)
+            msg = result.get("message", "Shipment cancelled")
+        except SendcloudError as e:
+            # Already cancelled (e.g. in the Sendcloud panel), clean up locally anyway
+            if e.status_code != 409 or "already" not in str(e):
+                return JSONResponse({"success": False, "msg": str(e)})
+            msg = "Shipment was already cancelled"
+
+    # Keep the cancelled label around, but out of the way
+    label_path = Path(LABEL_PATH)
+    for ext in ("png", "json"):
+        f = label_path / f"{invoice_number}.{ext}"
+        if f.is_file():
+            f.rename(label_path / f"{invoice_number}.cancelled.{ext}")
+    logging.info(f"Shipping label for {invoice_number} cancelled: {msg}")
+    return JSONResponse({"success": True, "msg": msg})
 
 
 @app.get("/api/order/products")

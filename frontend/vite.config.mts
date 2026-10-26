@@ -32,6 +32,11 @@ export default defineConfig({
   ],
   server: {
     port: 3001,
+    // Dev server only, allow access via any hostname from the local network
+    allowedHosts: true,
+    proxy: {
+      "/api": process.env.API_PROXY_TARGET || "http://localhost:8000",
+    },
   },
   define: { "process.env": {} },
   resolve: {

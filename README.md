@@ -4,8 +4,12 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
 
 - send invoice as an email attachment and mark invoice as sent
 - mark invoice as paid
-- purchase Deutsche Post [Internetmarken](https://shop.deutschepost.de/internetmarke) 
-- print the Internetmarke on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w)
+- create shipping labels
+  - Deutsche Post [Internetmarke](https://shop.deutschepost.de/internetmarke) (Großbrief) for shipments within Germany
+  - DHL Warenpost International Premium (with tracking) via [Sendcloud](https://www.sendcloud.com/) for international shipments
+  - the default method can be overridden per invoice
+- print the Internetmarke on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w) (38mm endless)
+- print the Warenpost label on a Brother QL-1110NWB (DK-11247, 103x164mm)
 - print the invoice on paper
 - Integration with PayPal and Sparkasse (via FinTS) to fetch the latest payment data and update the payment status with that data
 
@@ -20,6 +24,7 @@ The tech stack:
  - [FastAPI](https://fastapi.tiangolo.com/)
  - [Vue3](https://vuejs.org/)
  - [Vuetify](https://vuetifyjs.com/)
+ - [Sendcloud API v3](https://sendcloud.dev/)
  - [python-inema](https://codeberg.org/gms/python-inema)
  - [brother_ql](https://github.com/pklaus/brother_ql)
  - [python-fints](github.com/raphaelm/python-fints)
