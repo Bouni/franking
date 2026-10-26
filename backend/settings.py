@@ -79,7 +79,10 @@ DEFAULTS = {
 
 
 class SettingsError(Exception):
-    pass
+    def __init__(self, msg: str):
+        super().__init__(msg)
+        # Validation text that may be shown to the user
+        self.user_message = msg
 
 
 def load() -> dict:

@@ -372,7 +372,7 @@ async def update_settings(data: dict):
     try:
         return settings.save(data)
     except settings.SettingsError as e:
-        return JSONResponse({"success": False, "msg": str(e)}, status_code=400)
+        return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
 
 
 @app.post("/api/shipping/print")
