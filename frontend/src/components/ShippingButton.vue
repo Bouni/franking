@@ -31,15 +31,21 @@ const { createLabel } = store;
       <v-btn
         v-bind="tooltipProps"
         class="ma-1"
-        color="#ffcc00"
+        :color="disabled ? undefined : '#ffcc00'"
         :disabled="disabled"
         icon
         :loading="
           isLoading?.action === 'createLabel' && isLoading?.id === invoiceId
         "
+        :variant="disabled ? 'tonal' : 'flat'"
         @click="createLabel(invoiceId)"
       >
-        <v-img alt="DHL" :src="dhlIcon" width="34" />
+        <v-img
+          alt="DHL"
+          :class="{ 'opacity-40': disabled }"
+          :src="dhlIcon"
+          width="34"
+        />
       </v-btn>
     </template>
   </v-tooltip>
