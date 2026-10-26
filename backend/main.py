@@ -215,6 +215,20 @@ async def create_shipping_label(data: dict):
     invoice_data = await load_invoice(data.get("invoice_id", ""))
     customer = invoice_data["customer"]
     invoice_number = invoice_data["invoiceNumber"]
+
+    # Ship only after payment, and never twice
+    if invoice_data.get("status") != "paid":
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": f"Invoice {invoice_number} is {invoice_data.get('status')}, "
+                "labels can only be bought for paid invoices.",
+            }
+        )
+    if label_info(invoice_number) is not None:
+        return JSONResponse(
+            {"success": False, "msg": f"Invoice {invoice_number} already has a label."}
+        )
     # DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
     code = shipping_option(customer["countryCode"])
     weight_g = SENDCLOUD_DEFAULT_WEIGHT_G
