@@ -188,6 +188,13 @@ async def send_invoice_email(data: dict):
             P.S. Sorry to those of you who are non german speakers, my invoicing software is limited when it comes to localization and you might get the invoice not in yor language but in german or english 😅
             """).strip()
         invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
+        if DEBUG:
+            recipient = (invoice_data.get("customer") or {}).get("email")
+            logging.info(
+                f"DEBUG active, invoice email not sent: '{subject}' to {recipient} "
+                f"({len(invoice_pdf)} bytes PDF), status unchanged"
+            )
+            return JSONResponse({"success": True, "debug": True})
         m = Mail(subject, body, invoice_data, invoice_pdf)
         await m.send_invoice()
         # Re-sending must not move a paid/complete invoice back to "sent"
