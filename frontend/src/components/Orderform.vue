@@ -208,27 +208,13 @@
 
             <v-row density="compact">
               <v-col cols="12" lg="6" sm="6">
-                <div class="item-caption">Shipping</div>
-              </v-col>
-
-              <v-col cols="12" lg="2" sm="2" />
-
-              <v-col cols="12" lg="2" sm="2">
-                <div class="item-caption">{{ shipping.toFixed(2) }}€</div>
-              </v-col>
-
-              <v-col cols="12" lg="2" sm="2" />
-            </v-row>
-
-            <v-row density="compact">
-              <v-col cols="12" lg="6" sm="6">
                 <div class="item-caption">Sum</div>
               </v-col>
 
               <v-col cols="12" lg="2" sm="2" />
 
               <v-col cols="12" lg="2" sm="2">
-                <div class="item-caption">{{ grandTotal.toFixed(2) }}€</div>
+                <div class="item-caption">{{ subtotal.toFixed(2) }}€</div>
               </v-col>
 
               <v-col cols="12" lg="2" sm="2" />
@@ -291,20 +277,6 @@ const subtotal = computed(() => {
   return order.value.items.reduce((sum, item) => {
     return sum + item.price * item.quantity;
   }, 0);
-});
-
-const shipping = computed(() => {
-  if (order.value.country == "") {
-    return 0;
-  } else if (order.value.country == "DE") {
-    return 1.8;
-  } else {
-    return 3.3;
-  }
-});
-// Calculate grand total including shipping
-const grandTotal = computed(() => {
-  return subtotal.value + shipping.value;
 });
 
 // Validation rules array of functions returning true or an error message string
