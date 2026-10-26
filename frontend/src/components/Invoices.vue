@@ -1,40 +1,44 @@
 <template>
   <v-row>
-    <v-row class="mb-4" align="center">
-      <v-col cols="12" md="auto" class="d-flex justify-center justify-md-start">
+    <v-row align="center" class="mb-4">
+      <v-col class="d-flex justify-center justify-md-start" cols="12" md="auto">
         <Internetmarke />
       </v-col>
+
       <v-col
         v-for="(color, state) in status_colors"
         :key="state"
         cols="6"
-        sm="4"
         md="auto"
+        sm="4"
       >
         <v-switch
           v-model="selectedStates"
-          :label="state"
-          :value="state"
           :color="color"
           hide-details
-        ></v-switch>
+          :label="state"
+          :value="state"
+        />
       </v-col>
-      <v-col cols="12" md="auto" class="d-flex justify-center ml-md-4">
+
+      <v-col class="d-flex justify-center ml-md-4" cols="12" md="auto">
         <v-btn
-          color="primary"
           class="px-4 mt-3 ml-5"
+          color="primary"
           :loading="isLoading?.action === 'updatePayments'"
           @click="updatePayments()"
         >
           <img
+            alt=""
+            class="mr-2"
+            height="20"
             :src="sparkasseIcon"
             width="20"
-            height="20"
-            class="mr-2"
-            alt=""
           />
+
           <span class="mx-1">Update</span>
-          <img :src="paypalIcon" width="20" height="20" class="ml-2" alt="" />
+
+          <img alt="" class="ml-2" height="20" :src="paypalIcon" width="20" />
         </v-btn>
       </v-col>
     </v-row>
@@ -66,33 +70,36 @@
           "
           :mobile-breakpoint="600"
         >
-          <template v-slot:loading>
-            <v-skeleton-loader type="table-row@10"></v-skeleton-loader>
+          <template #loading>
+            <v-skeleton-loader type="table-row@10" />
           </template>
+
           <template #item.subtotal="{ value }">
             {{ value.toFixed(2) }} €
           </template>
+
           <template #item.status="{ item }">
             <v-chip
-              size="small"
               :color="status_colors[item.status as keyof typeof status_colors]"
+              size="small"
               variant="flat"
             >
               {{ item.status }}
-              <template v-slot:append>
+              <template #append>
                 <v-img
                   v-if="getPaymentMethod(item)"
-                  width="16"
+                  class="ml-2"
                   :src="
                     getPaymentMethod(item) == 'PayPal'
                       ? paypalIcon
                       : sparkasseIcon
                   "
-                  class="ml-2"
-                ></v-img>
+                  width="16"
+                />
               </template>
             </v-chip>
           </template>
+
           <template #item.checks="{ item }">
             <v-icon
               :color="
@@ -106,30 +113,32 @@
                   : 'mdi-alert'
               "
               size="large"
-            ></v-icon>
+            />
           </template>
+
           <template #item.customer.countryCode="{ value }">
             <span class="ms-2">{{ value }}</span>
+
             <span
               class="ml-4"
               :class="`fi fi-${value.toLowerCase()}`"
               style="border-radius: 2px"
-            ></span>
+            />
           </template>
+
           <template #item.actions="{ item }">
             <ActionButton
-              icon="mdi-email-fast"
-              color="lime-accent-3"
-              tooltip="Send invoice as e-mail"
               action="sendInvoice"
               :action-id="item.id"
+              color="lime-accent-3"
               :disabled="item.customer.email === ''"
+              icon="mdi-email-fast"
+              tooltip="Send invoice as e-mail"
               @click="sendInvoice(item.id)"
             />
 
             <SpeedDialButton
               :action-id="item.id"
-              :disabled="item.status !== 'sent'"
               :actions="[
                 {
                   icon: paypalIcon,
@@ -144,6 +153,7 @@
                   onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
                 },
               ]"
+              :disabled="item.status !== 'sent'"
             />
             <!-- <ActionButton -->
             <!--   icon="mdi-currency-eur" -->
@@ -156,61 +166,61 @@
             <!-- /> -->
 
             <ShippingButton
-              :invoice-id="item.id"
               :country-code="item.customer.countryCode"
               :disabled="!!item.label"
+              :invoice-id="item.id"
             />
 
             <ActionButton
-              icon="mdi-printer"
+              action="printLabel"
+              :action-id="item.invoiceNumber"
               color="purple"
+              :disabled="!item.label"
+              icon="mdi-printer"
               :tooltip="
                 item.label
                   ? `Print shipping label (${printerNames[item.label.printer] ?? item.label.printer})`
                   : 'Print shipping label'
               "
-              action="printLabel"
-              :action-id="item.invoiceNumber"
-              :disabled="!item.label"
               @click="printLabel(item.invoiceNumber)"
             />
 
             <ActionButton
-              icon="mdi-cancel"
-              color="red-darken-2"
-              tooltip="Cancel shipping label"
               action="cancelLabel"
               :action-id="item.invoiceNumber"
+              color="red-darken-2"
               :disabled="!item.label || item.label.carrier === 'internetmarke'"
+              icon="mdi-cancel"
+              tooltip="Cancel shipping label"
               @click="confirmCancelLabel(item.invoiceNumber)"
             />
 
             <v-btn
               v-if="item.label?.tracking_url"
-              icon="mdi-truck-fast"
-              variant="text"
-              size="small"
               :href="item.label.tracking_url"
+              icon="mdi-truck-fast"
+              size="small"
               target="_blank"
+              variant="text"
             />
 
             <ActionButton
-              icon="mdi-printer-outline"
-              color="red"
-              tooltip="Print invoice"
               action="printInvoice"
               :action-id="item.id"
+              color="red"
               :disabled="item.status !== 'paid'"
+              icon="mdi-printer-outline"
+              tooltip="Print invoice"
               @click="printInvoice(item.id)"
             />
 
             <ActionButton
-              icon="mdi-check"
-              color="lime-accent-3"
-              tooltip="Mark as complete"
               action="markInvoiceComplete"
               :action-id="item.id"
+              color="lime-accent-3"
               :disabled="item.status !== 'paid'"
+              icon="mdi-check"
+              tooltip="Mark as complete"
               @click="markInvoiceComplete(item.id)"
             />
           </template>
@@ -221,15 +231,15 @@
 </template>
 
 <script setup lang="ts">
-import Internetmarke from "@/components/Internetmarke.vue";
-import ActionButton from "@/components/ActionButton.vue";
-import SpeedDialButton from "@/components/SpeedDialButton.vue";
-import ShippingButton from "@/components/ShippingButton.vue";
-import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
-import { onMounted, computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
+import ActionButton from "@/components/ActionButton.vue";
+import Internetmarke from "@/components/Internetmarke.vue";
+import ShippingButton from "@/components/ShippingButton.vue";
+import SpeedDialButton from "@/components/SpeedDialButton.vue";
+import { useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
@@ -276,11 +286,11 @@ const statusCounts = computed(() => {
     {} as Record<string, number>,
   );
 
-  invoices.value.forEach((item) => {
+  for (const item of invoices.value) {
     if (item.status in counts) {
       counts[item.status]++;
     }
-  });
+  }
 
   return counts;
 });
@@ -291,10 +301,10 @@ const filteredInvoices = computed(() => {
   );
 });
 
-const getPaymentMethod = (item: any) => {
+function getPaymentMethod(item: any) {
   return item.statusHistory.find((entry: any) => entry.paymentMethod)
     ?.paymentMethod;
-};
+}
 
 const headers = [
   { title: "Invoice number", key: "invoiceNumber", align: "start" },

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
 import { storeToRefs } from "pinia";
-import { useAppStore } from "@/store/app";
+import { computed } from "vue";
 import dhlIcon from "@/assets/DHL.svg";
 import postIcon from "@/assets/Post.svg";
+import { useAppStore } from "@/store/app";
 
 const props = defineProps<{
   invoiceId: string;
@@ -21,29 +21,29 @@ const { createLabel } = store;
 
 <template>
   <v-tooltip
+    location="top"
     :text="
       national
         ? 'Purchase Internetmarke (Deutsche Post)'
         : 'Purchase DHL Warenpost International Premium'
     "
-    location="top"
   >
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"
-        icon
-        color="#ffcc00"
         class="ma-2"
+        color="#ffcc00"
         :disabled="disabled"
+        icon
         :loading="
           isLoading?.action === 'createLabel' && isLoading?.id === invoiceId
         "
         @click="createLabel(invoiceId)"
       >
         <v-img
+          :alt="national ? 'Deutsche Post' : 'DHL'"
           :src="national ? postIcon : dhlIcon"
           :width="national ? 28 : 34"
-          :alt="national ? 'Deutsche Post' : 'DHL'"
         />
       </v-btn>
     </template>
