@@ -211,10 +211,10 @@
                   action="sendInvoice"
                   :action-id="item.id"
                   color="#1982c4"
-                  :disabled="item.customer.email === ''"
+                  :disabled="!item.customer.email"
                   icon="mdi-email-fast"
                   tooltip="Send invoice as e-mail"
-                  @click="sendInvoice(item.id)"
+                  @click="requestSendInvoice(item)"
                 />
 
                 <ActionButton
@@ -327,6 +327,34 @@
         </v-data-table>
       </v-card>
     </v-col>
+
+    <v-dialog v-model="resendDialog" max-width="460">
+      <v-card prepend-icon="mdi-email-sync" title="Send invoice again?">
+        <v-card-text>
+          <p>
+            Invoice <strong>{{ resendInvoice?.invoiceNumber }}</strong> has
+            already been sent, its current status is
+            <strong>{{ resendInvoice?.status }}</strong
+            >.
+          </p>
+
+          <p class="mt-2">
+            Send it again to
+            <strong>{{ resendInvoice?.customer?.email }}</strong
+            >?
+          </p>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="resendDialog = false">Cancel</v-btn>
+
+          <v-btn color="#1982c4" variant="flat" @click="confirmResend">
+            Send again
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-row>
 </template>
 
@@ -368,6 +396,26 @@ const printerNames: Record<string, string> = {
   ql710: "QL-710W",
   ql1110: "QL-1110NWB",
 };
+
+// Ask before sending an invoice that already went out
+const resendDialog = ref(false);
+const resendInvoice = ref<any>(null);
+
+function requestSendInvoice(invoice: any) {
+  if (invoice.status === "draft") {
+    sendInvoice(invoice.id);
+    return;
+  }
+  resendInvoice.value = invoice;
+  resendDialog.value = true;
+}
+
+function confirmResend() {
+  resendDialog.value = false;
+  if (resendInvoice.value) {
+    sendInvoice(resendInvoice.value.id);
+  }
+}
 
 function confirmCancelLabel(invoice_number: string) {
   if (window.confirm(`Cancel the shipping label for ${invoice_number}?`)) {
