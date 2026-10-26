@@ -9,6 +9,7 @@ defineProps<{
   action: LoadingState["action"];
   actionId: string | number;
   disabled?: boolean;
+  variant?: "flat" | "tonal" | "outlined" | "text";
 }>();
 
 const emit = defineEmits(["click"]);
@@ -22,11 +23,12 @@ const { isLoading } = storeToRefs(store);
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"
-        class="ma-2"
-        :color="color"
+        class="ma-1"
+        :color="disabled ? undefined : color"
         :disabled="disabled"
         :icon="icon"
         :loading="isLoading?.action === action && isLoading?.id === actionId"
+        :variant="disabled ? 'tonal' : (variant ?? 'flat')"
         @click="emit('click')"
       />
     </template>

@@ -14,6 +14,7 @@ defineProps<{
   actionId: string | number;
   actions: DialAction[];
   disabled?: boolean;
+  color?: string;
 }>();
 
 const store = useAppStore();
@@ -27,9 +28,11 @@ const { isLoading } = storeToRefs(store);
         <template #activator="{ props: tooltipProps }">
           <v-btn
             v-bind="mergeProps(dialProps, tooltipProps)"
-            color="green"
+            class="ma-1"
+            :color="disabled ? undefined : (color ?? 'green')"
             :disabled="disabled"
             icon="mdi-currency-eur"
+            :variant="disabled ? 'tonal' : 'flat'"
           />
         </template>
       </v-tooltip>

@@ -154,7 +154,9 @@ export const useAppStore = defineStore("app", () => {
       await api.post(`/invoices/email`, { invoice_id });
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (invoice) {
-        invoice.status = "sent";
+        if (invoice.status === "draft") {
+          invoice.status = "sent";
+        }
         showToast("Successfully sent Invoice!", "#8ac926", 3);
       } else {
         showToast("Invoice not found", "#ff595e", 10);

@@ -190,7 +190,9 @@ async def send_invoice_email(data: dict):
         invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
         m = Mail(subject, body, invoice_data, invoice_pdf)
         await m.send_invoice()
-        await invio.set_status_sent(data.get("invoice_id"))
+        # Re-sending must not move a paid/complete invoice back to "sent"
+        if invoice_data.get("status") == "draft":
+            await invio.set_status_sent(data.get("invoice_id"))
     return JSONResponse({"success": True})
 
 
