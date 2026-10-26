@@ -13,10 +13,11 @@ logging.basicConfig(level=logging.INFO)
 INVIO_URL = os.getenv("INVIO_URL", "")
 INVIO_USER = os.getenv("INVIO_USER", "")
 INVIO_PASSWORD = os.getenv("INVIO_PASSWORD", "")
+INVIO_DB_PATH = os.getenv("INVIO_DB_PATH", "/app/invio.db")
 
 
 class InvioDB:
-    def __init__(self, db_path: str = "/app/invio.db"):
+    def __init__(self, db_path: str = INVIO_DB_PATH):
         self.uri = f"file:{db_path}?mode=ro"
         self._conn: aiosqlite.Connection | None = None
 
@@ -56,6 +57,8 @@ class InvioDB:
             SELECT json_object(
               'id', c.id,
               'name', c.name,
+              'contactName', c.contact_name,
+              'phone', c.phone,
               'email', c.email,
               'address', c.address,
               'countryCode', c.country_code,

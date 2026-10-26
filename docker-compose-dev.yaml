@@ -20,6 +20,7 @@ services:
       # Dry run by default, set DEV_DEBUG=false in .env to buy real labels in dev
       DEBUG: ${DEV_DEBUG:-true}
       LABEL_PATH: /labels
+      INVIO_DB_PATH: /data/invio.db
       # Keep the venv and uv caches out of the bind mount
       UV_PROJECT_ENVIRONMENT: /opt/venv
       UV_CACHE_DIR: /opt/uv-cache
@@ -40,8 +41,9 @@ services:
       # Anonymous volume, so the (missing) static frontend build doesn't end up in ./backend
       - /app/static
       - ./labels:/labels
-      # Invio database, read only (InvioDB reads /app/invio.db)
-      - /opt/docker/invio/data/invio.db:/app/invio.db:ro
+      # Invio database, read only. Mounted outside /app on purpose: a file mount
+      # inside the ./backend bind mount needs a placeholder file in ./backend
+      - /opt/docker/invio/data/invio.db:/data/invio.db:ro
       - uv-venv:/opt/venv
       - uv-cache:/opt/uv-cache
       - uv-python:/opt/uv-python

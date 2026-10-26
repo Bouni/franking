@@ -17,3 +17,5 @@ node_modules
 
 *.bin
 .pnpm-store
+# Leftover mount point of the old dev setup
+backend/invio.db
