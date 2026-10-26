@@ -148,22 +148,27 @@ def validate(data: dict, products: list) -> tuple[dict, list]:
     return values, items
 
 
-def shipping_item(products: list, country: str, price: float) -> dict:
+def shipping_item(products: list, country: str, quote: dict) -> dict:
     """Invoice line for the shipping costs, using the matching Invio shipping
-    product ("Versand national" / "Versand international") if there is one"""
+    product ("Versand national" / "Versand international") if there is one.
+    The shipping method from the order form is added in brackets, e.g.
+    "Versand national (DHL Kleinpaket)"."""
     international = alpha_2(country) != "DE"
+    item = {
+        "description": "Versand international" if international else "Versand national",
+        "quantity": 1,
+        "unitPrice": quote["price_rounded"],
+    }
     for p in products:
         if p.get("category") != "shipping":
             continue
         if ("international" in p["name"].lower()) == international:
-            return {
-                "productId": p["id"],
-                "description": p["name"],
-                "quantity": 1,
-                "unitPrice": price,
-            }
-    name = "Versand international" if international else "Versand national"
-    return {"description": name, "quantity": 1, "unitPrice": price}
+            item["productId"] = p["id"]
+            item["description"] = p["name"]
+            break
+    if quote.get("name"):
+        item["description"] += f" ({quote['name']})"
+    return item
 
 
 def find_customer(customers: list, customer: dict) -> dict | None:

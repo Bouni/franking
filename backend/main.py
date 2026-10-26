@@ -438,9 +438,7 @@ async def submit_order(data: dict, request: Request):
                 status_code=502,
             )
 
-        items.append(
-            order.shipping_item(products, values["country"], quote["price_rounded"])
-        )
+        items.append(order.shipping_item(products, values["country"], quote))
         customer_data = {
             "name": f"{values['firstname']} {values['lastname']}",
             "contactName": values["contact"],
