@@ -328,29 +328,53 @@
       </v-card>
     </v-col>
 
-    <v-dialog v-model="resendDialog" max-width="460">
-      <v-card prepend-icon="mdi-email-sync" title="Send invoice again?">
+    <v-dialog v-model="sendDialog" max-width="760">
+      <v-card
+        :prepend-icon="isResend ? 'mdi-email-sync' : 'mdi-email-fast'"
+        :subtitle="`To ${email.recipient ?? sendInvoiceItem?.customer?.email}`"
+        :title="`${isResend ? 'Send invoice again' : 'Send invoice'} ${sendInvoiceItem?.invoiceNumber ?? ''}`"
+      >
         <v-card-text>
-          <p>
-            Invoice <strong>{{ resendInvoice?.invoiceNumber }}</strong> has
-            already been sent, its current status is
-            <strong>{{ resendInvoice?.status }}</strong
+          <v-alert
+            v-if="isResend"
+            class="mb-4"
+            density="compact"
+            type="warning"
+            variant="tonal"
+          >
+            This invoice has already been sent, its current status is
+            <strong>{{ sendInvoiceItem?.status }}</strong
             >.
-          </p>
+          </v-alert>
 
-          <p class="mt-2">
-            Send it again to
-            <strong>{{ resendInvoice?.customer?.email }}</strong
-            >?
-          </p>
+          <v-text-field v-model="email.subject" label="Subject" />
+
+          <v-textarea
+            v-model="email.body"
+            auto-grow
+            label="Text"
+            max-rows="20"
+            rows="12"
+          />
+
+          <div class="text-caption">
+            Changes here only apply to this email, the template is edited in the
+            Settings tab.
+          </div>
         </v-card-text>
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="resendDialog = false">Cancel</v-btn>
+          <v-btn @click="sendDialog = false">Cancel</v-btn>
 
-          <v-btn color="#1982c4" variant="flat" @click="confirmResend">
-            Send again
+          <v-btn
+            color="#1982c4"
+            :disabled="!email.subject.trim() || !email.body.trim()"
+            prepend-icon="mdi-send"
+            variant="flat"
+            @click="confirmSend"
+          >
+            {{ isResend ? "Send again" : "Send" }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -367,7 +391,7 @@ import ActionButton from "@/components/ActionButton.vue";
 import Internetmarke from "@/components/Internetmarke.vue";
 import ShippingButton from "@/components/ShippingButton.vue";
 import SpeedDialButton from "@/components/SpeedDialButton.vue";
-import { useAppStore } from "@/store/app";
+import { type InvoiceEmail, useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
@@ -378,6 +402,7 @@ const {
   markInvoiceComplete,
   fetchInvoices,
   printInvoice,
+  previewInvoiceEmail,
   sendInvoice,
   updatePayments,
 } = appStore;
@@ -397,23 +422,29 @@ const printerNames: Record<string, string> = {
   ql1110: "QL-1110NWB",
 };
 
-// Ask before sending an invoice that already went out
-const resendDialog = ref(false);
-const resendInvoice = ref<any>(null);
+// Show the email before sending, so subject and text can be adjusted, and
+// warn when the invoice already went out
+const sendDialog = ref(false);
+const sendInvoiceItem = ref<any>(null);
+const email = ref<InvoiceEmail>({ subject: "", body: "" });
+const isResend = computed(
+  () => !!sendInvoiceItem.value && sendInvoiceItem.value.status !== "draft",
+);
 
-function requestSendInvoice(invoice: any) {
-  if (invoice.status === "draft") {
-    sendInvoice(invoice.id);
+async function requestSendInvoice(invoice: any) {
+  const preview = await previewInvoiceEmail(invoice.id);
+  if (!preview) {
     return;
   }
-  resendInvoice.value = invoice;
-  resendDialog.value = true;
+  sendInvoiceItem.value = invoice;
+  email.value = preview;
+  sendDialog.value = true;
 }
 
-function confirmResend() {
-  resendDialog.value = false;
-  if (resendInvoice.value) {
-    sendInvoice(resendInvoice.value.id);
+function confirmSend() {
+  sendDialog.value = false;
+  if (sendInvoiceItem.value) {
+    sendInvoice(sendInvoiceItem.value.id, email.value);
   }
 }
 

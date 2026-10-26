@@ -170,17 +170,43 @@ async def print_invoice(data: dict):
     return JSONResponse({"success": True})
 
 
+def invoice_email(invoice_data: dict) -> tuple[str, str]:
+    """Subject and text of the invoice email, from the template in the settings"""
+    config = settings.load()
+    values = {
+        "name": (invoice_data.get("customer") or {}).get("name"),
+        "invoice_number": invoice_data.get("invoiceNumber"),
+    }
+    return (
+        settings.render(config["invoice_email_subject"], values),
+        settings.render(config["invoice_email_body"], values),
+    )
+
+
+@app.post("/api/invoices/email/preview")
+async def preview_invoice_email(data: dict):
+    async with await Invio.create() as invio:
+        invoice_data = await invio.get_invoice_data(data.get("invoice_id", ""))
+    subject, body = invoice_email(invoice_data)
+    return JSONResponse(
+        {
+            "subject": subject,
+            "body": body,
+            "recipient": (invoice_data.get("customer") or {}).get("email"),
+        }
+    )
+
+
 @app.post("/api/invoices/email")
 async def send_invoice_email(data: dict):
     async with await Invio.create() as invio:
         invoice_data = await invio.get_invoice_data(data.get("invoice_id", ""))
-        config = settings.load()
-        values = {
-            "name": (invoice_data.get("customer") or {}).get("name"),
-            "invoice_number": invoice_data.get("invoiceNumber"),
-        }
-        subject = settings.render(config["invoice_email_subject"], values)
-        body = settings.render(config["invoice_email_body"], values)
+        subject, body = invoice_email(invoice_data)
+        # Text edited in the send dialog replaces the template
+        if isinstance(data.get("subject"), str) and data["subject"].strip():
+            subject = data["subject"].strip()
+        if isinstance(data.get("body"), str) and data["body"].strip():
+            body = data["body"]
         invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
         if DEBUG:
             recipient = (invoice_data.get("customer") or {}).get("email")
