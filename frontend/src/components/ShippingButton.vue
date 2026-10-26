@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import dhlIcon from "@/assets/DHL.svg";
 import { useAppStore } from "@/store/app";
 
@@ -13,6 +13,21 @@ const props = defineProps<{
 // DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
 const national = computed(() => props.countryCode?.toUpperCase() === "DE");
 
+// No DHL product via Sendcloud for these countries, the label is bought manually
+const MANUAL_COUNTRIES = new Set(["US"]);
+const manual = computed(() =>
+  MANUAL_COUNTRIES.has(props.countryCode?.toUpperCase()),
+);
+const manualDialog = ref(false);
+
+function purchase() {
+  if (manual.value) {
+    manualDialog.value = true;
+  } else {
+    createLabel(props.invoiceId);
+  }
+}
+
 const store = useAppStore();
 const { isLoading } = storeToRefs(store);
 const { createLabel } = store;
@@ -22,9 +37,11 @@ const { createLabel } = store;
   <v-tooltip
     location="top"
     :text="
-      national
-        ? 'Purchase DHL Kleinpaket'
-        : 'Purchase DHL Warenpost International Premium'
+      manual
+        ? 'DHL Paket 2kg, buy the label manually'
+        : national
+          ? 'Purchase DHL Kleinpaket'
+          : 'Purchase DHL Warenpost International Premium'
     "
   >
     <template #activator="{ props: tooltipProps }">
@@ -38,7 +55,7 @@ const { createLabel } = store;
           isLoading?.action === 'createLabel' && isLoading?.id === invoiceId
         "
         :variant="disabled ? 'tonal' : 'flat'"
-        @click="createLabel(invoiceId)"
+        @click="purchase"
       >
         <v-img
           alt="DHL"
@@ -49,4 +66,30 @@ const { createLabel } = store;
       </v-btn>
     </template>
   </v-tooltip>
+
+  <v-dialog v-model="manualDialog" max-width="520">
+    <v-card prepend-icon="mdi-truck-alert" title="Manual shipping label">
+      <v-card-text>
+        <p>
+          Sendcloud offers no DHL product for shipments to
+          <strong>{{ countryCode?.toUpperCase() }}</strong
+          >, so this label can't be bought here.
+        </p>
+
+        <p class="mt-3">
+          Please purchase a DHL shipping label for a
+          <strong>"2kg Paket"</strong> manually and attach it to the parcel. The
+          customer was charged a fixed shipping price for this.
+        </p>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer />
+
+        <v-btn color="primary" variant="flat" @click="manualDialog = false">
+          Got it
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>

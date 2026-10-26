@@ -23,6 +23,7 @@ from sendcloud import (
     SENDCLOUD_DEFAULT_WEIGHT_G,
     Sendcloud,
     SendcloudError,
+    alpha_2,
     shipping_option,
 )
 from sparkasse import Sparkasse
@@ -208,6 +209,17 @@ async def create_shipping_label(data: dict):
     invoice_data = await load_invoice(data.get("invoice_id", ""))
     customer = invoice_data["customer"]
     invoice_number = invoice_data["invoiceNumber"]
+
+    # No Sendcloud product for these countries, the label is bought manually
+    if alpha_2(customer["countryCode"]) in order.MANUAL_SHIPPING:
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": f"Invoice {invoice_number} ships to "
+                f"{customer['countryCode']}: buy a DHL label for a 2kg Paket "
+                "manually.",
+            }
+        )
 
     # Ship only after payment, and never twice
     if invoice_data.get("status") != "paid":

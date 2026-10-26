@@ -13,6 +13,12 @@ RATE_LIMIT = 5
 RATE_WINDOW_S = 3600
 _orders_per_ip: dict[str, deque] = defaultdict(deque)
 
+# Countries without a Sendcloud/DHL product: fixed shipping price, the label
+# (DHL Paket 2 kg) is bought manually
+MANUAL_SHIPPING = {
+    "US": {"name": "DHL Paket International", "price": 30},
+}
+
 # Shipping prices are fetched from Sendcloud, cache them per country
 QUOTE_CACHE_S = 3600
 _quotes: dict[str, tuple[float, dict]] = {}
@@ -60,6 +66,8 @@ def rate_limited(client_ip: str) -> bool:
 async def shipping_quote(country_code: str) -> dict:
     """Shipping price for the label weight, rounded up to the next full euro"""
     country = alpha_2(country_code)
+    if manual := MANUAL_SHIPPING.get(country):
+        return {**manual, "price_rounded": manual["price"], "manual": True}
     cached = _quotes.get(country)
     if cached and time.monotonic() - cached[0] < QUOTE_CACHE_S:
         return cached[1]
