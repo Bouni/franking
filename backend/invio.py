@@ -175,6 +175,21 @@ class Invio:
         response.raise_for_status()
         return response.json()
 
+    async def get_customers(self) -> list:
+        response = await self.client.get("/customers")
+        response.raise_for_status()
+        return response.json()
+
+    async def create_customer(self, data: dict) -> dict:
+        response = await self.client.post("/customers", json=data)
+        response.raise_for_status()
+        return response.json()
+
+    async def create_invoice(self, data: dict) -> dict:
+        response = await self.client.post("/invoices", json=data)
+        response.raise_for_status()
+        return response.json()
+
     async def get_invoice_pdf(self, invoice_id: str) -> bytes:
         response = await self.client.get(f"/invoices/{invoice_id}/pdf")
         response.raise_for_status()

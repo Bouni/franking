@@ -15,7 +15,8 @@ SENDCLOUD_PUBLIC_KEY = os.getenv("SENDCLOUD_PUBLIC_KEY", "")
 SENDCLOUD_PRIVATE_KEY = os.getenv("SENDCLOUD_PRIVATE_KEY", "")
 SENDCLOUD_SENDER_ADDRESS_ID = os.getenv("SENDCLOUD_SENDER_ADDRESS_ID", "")
 
-# DHL Warenpost International Premium
+# DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
+SENDCLOUD_OPTION_NATIONAL = os.getenv("SENDCLOUD_OPTION_NATIONAL", "dhl_de:warenpost")
 SENDCLOUD_OPTION_INTERNATIONAL = os.getenv(
     "SENDCLOUD_OPTION_INTERNATIONAL", "dhl_de:warenpostinternational/premium"
 )
@@ -44,6 +45,12 @@ def alpha_2(country: str) -> str:
     if c := pycountry.countries.get(alpha_3=country.upper()):
         return c.alpha_2
     raise ValueError(f"Unknown country code {country}")
+
+
+def shipping_option(country_code: str) -> str:
+    if alpha_2(country_code) == "DE":
+        return SENDCLOUD_OPTION_NATIONAL
+    return SENDCLOUD_OPTION_INTERNATIONAL
 
 
 def needs_customs(country_code: str) -> bool:
@@ -83,6 +90,31 @@ class Sendcloud:
                 msg = response.text
             raise SendcloudError(msg, response.status_code)
         return response.json()
+
+    async def quote(self, to_country: str, weight_g: int) -> dict:
+        """Price of the shipping option for a country, including surcharges.
+        The weight has to be passed per parcel, a top level weight is ignored
+        for the price calculation."""
+        code = shipping_option(to_country)
+        data = await self._post(
+            "/shipping-options",
+            {
+                "from_country_code": alpha_2(SENDER_COUNTRY),
+                "to_country_code": alpha_2(to_country),
+                "parcels": [{"weight": {"value": weight_g, "unit": "g"}}],
+                "calculate_quotes": True,
+            },
+        )
+        for option in data.get("data") or []:
+            if option.get("code") == code and option.get("quotes"):
+                total = option["quotes"][0]["price"]["total"]
+                return {
+                    "code": code,
+                    "name": option.get("name"),
+                    "price": float(total["value"]),
+                    "currency": total["currency"],
+                }
+        raise SendcloudError(f"No price for {code} to {alpha_2(to_country)}")
 
     def _from_address(self) -> dict:
         if SENDCLOUD_SENDER_ADDRESS_ID:
