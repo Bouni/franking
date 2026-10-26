@@ -117,7 +117,12 @@
                 </v-btn>
               </template>
 
-              <v-card class="items-popover" elevation="8" min-width="420">
+              <v-card
+                border
+                class="items-popover"
+                elevation="8"
+                min-width="420"
+              >
                 <v-card-item>
                   <v-card-title>{{ item.invoiceNumber }}</v-card-title>
                   <v-card-subtitle>{{ item.customer?.name }}</v-card-subtitle>
@@ -410,6 +415,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.items-popover {
+  border-color: rgba(var(--v-border-color), 0.25) !important;
+}
+
 .items-popover th {
   font-weight: 600 !important;
 }
