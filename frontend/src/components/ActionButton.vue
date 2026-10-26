@@ -28,7 +28,7 @@ const { isLoading } = storeToRefs(store);
         :disabled="disabled"
         :icon="icon"
         :loading="isLoading?.action === action && isLoading?.id === actionId"
-        :variant="variant ?? 'flat'"
+        :variant="disabled ? 'tonal' : (variant ?? 'flat')"
         @click="emit('click')"
       />
     </template>

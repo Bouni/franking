@@ -32,6 +32,7 @@ const { isLoading } = storeToRefs(store);
             :color="disabled ? undefined : (color ?? 'green')"
             :disabled="disabled"
             icon="mdi-currency-eur"
+            :variant="disabled ? 'tonal' : 'flat'"
           />
         </template>
       </v-tooltip>
