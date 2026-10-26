@@ -31,6 +31,12 @@ export interface Settings {
   tracking_placeholders?: Record<string, string>;
 }
 
+export interface InvoiceEmail {
+  subject: string;
+  body: string;
+  recipient?: string;
+}
+
 export const useAppStore = defineStore("app", () => {
   const internetmarke = ref({ balance: 0 });
   const invoices = ref<any[]>([]);
@@ -160,11 +166,38 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  async function sendInvoice(invoice_id: string) {
+  async function previewInvoiceEmail(
+    invoice_id: string,
+  ): Promise<InvoiceEmail | null> {
+    // Shown as loading send button while the text is fetched
     isLoading.value = { id: invoice_id, action: "sendInvoice" };
 
     try {
-      const response = await api.post(`/invoices/email`, { invoice_id });
+      const response = await api.post(`/invoices/email/preview`, {
+        invoice_id,
+      });
+      return response.data;
+    } catch (error: any) {
+      showToast(
+        `Error loading email text: ${error.message || "Error loading email text"}`,
+        "#ff595e",
+        10,
+      );
+      return null;
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
+  async function sendInvoice(invoice_id: string, email?: InvoiceEmail) {
+    isLoading.value = { id: invoice_id, action: "sendInvoice" };
+
+    try {
+      const response = await api.post(`/invoices/email`, {
+        invoice_id,
+        subject: email?.subject,
+        body: email?.body,
+      });
       const invoice = invoices.value.find((inv) => inv.id === invoice_id);
       if (response.data.debug) {
         showToast("Dry run (DEBUG): invoice email NOT sent", "#ffca3a", 5);
@@ -347,6 +380,7 @@ export const useAppStore = defineStore("app", () => {
     createLabel,
     cancelLabel,
     printInvoice,
+    previewInvoiceEmail,
     sendInvoice,
     updatePayments,
   };
