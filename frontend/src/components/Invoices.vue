@@ -1,29 +1,10 @@
 <template>
-  <v-row>
-    <v-row align="center" class="mb-4">
-      <v-col class="d-flex justify-center justify-md-start" cols="12" md="auto">
+  <div>
+    <v-card class="mb-4" variant="flat">
+      <v-card-text class="d-flex flex-wrap align-center ga-3">
         <Internetmarke />
-      </v-col>
 
-      <v-col
-        v-for="(color, state) in status_colors"
-        :key="state"
-        cols="6"
-        md="auto"
-        sm="4"
-      >
-        <v-switch
-          v-model="selectedStates"
-          :color="color"
-          hide-details
-          :label="state"
-          :value="state"
-        />
-      </v-col>
-
-      <v-col class="d-flex justify-center ml-md-4" cols="12" md="auto">
         <v-btn
-          class="px-4 mt-3 ml-5"
           color="primary"
           :loading="isLoading?.action === 'updatePayments'"
           @click="updatePayments()"
@@ -36,299 +17,220 @@
             width="20"
           />
 
-          <span class="mx-1">Update</span>
-
+          <span class="mx-1">Update payments</span>
           <img alt="" class="ml-2" height="20" :src="paypalIcon" width="20" />
         </v-btn>
-      </v-col>
-    </v-row>
 
-    <v-col cols="12">
-      <v-card>
-        <v-card-text class="d-flex flex-wrap ga-2">
-          <v-chip
-            v-for="(color, status) in status_colors"
-            :key="status"
-            :color="color"
-            variant="flat"
-          >
-            <span class="text-capitalize">{{ status }}:</span>
-            <span class="ml-2">{{ statusCounts[status] }}</span>
-          </v-chip>
-        </v-card-text>
-      </v-card>
-    </v-col>
+        <v-spacer />
 
-    <v-col cols="12">
-      <v-card>
-        <v-data-table
-          :headers="headers"
-          :items="filteredInvoices"
-          :loading="
-            isLoading?.action === 'fetchInvoices' ||
-            (isLoading === null && invoices.length === 0)
-          "
-          :mobile-breakpoint="600"
+        <v-text-field
+          v-model="search"
+          class="search"
+          clearable
+          density="compact"
+          flat
+          hide-details
+          placeholder="Invoice, customer, email, city"
+          prepend-inner-icon="mdi-magnify"
+          variant="solo-filled"
+        />
+      </v-card-text>
+
+      <v-card-text class="pt-0">
+        <!-- Each chip filters by its status and shows how many invoices have it -->
+        <v-chip-group
+          v-model="selectedStates"
+          class="status-filter"
+          column
+          multiple
         >
-          <template #loading>
-            <v-skeleton-loader type="table-row@10" />
-          </template>
+          <v-chip
+            v-for="(color, status) in statusColors"
+            :key="status"
+            :class="{ selected: selectedStates.includes(status) }"
+            :color="selectedStates.includes(status) ? color : undefined"
+            :value="status"
+            :variant="selectedStates.includes(status) ? 'flat' : 'outlined'"
+          >
+            <template #prepend>
+              <v-icon
+                v-if="selectedStates.includes(status)"
+                class="mr-1"
+                icon="mdi-check"
+                size="small"
+              />
 
-          <template #item.subtotal="{ value }">
-            {{ value.toFixed(2) }} €
-          </template>
+              <span v-else class="dot mr-2" :style="{ background: color }" />
+            </template>
 
-          <template #item.status="{ item }">
-            <v-chip
-              :color="status_colors[item.status as keyof typeof status_colors]"
-              size="small"
-              variant="flat"
-            >
-              {{ item.status }}
-              <template #append>
-                <v-img
-                  v-if="getPaymentMethod(item)"
-                  class="ml-2"
-                  :src="
-                    getPaymentMethod(item) == 'PayPal'
-                      ? paypalIcon
-                      : sparkasseIcon
-                  "
-                  width="16"
-                />
-              </template>
-            </v-chip>
-          </template>
+            <span class="text-capitalize">{{ status }}</span>
+            <span class="count ml-2">{{ statusCounts[status] }}</span>
+          </v-chip>
+        </v-chip-group>
+      </v-card-text>
+    </v-card>
 
-          <template #item.items="{ item }">
-            <v-menu
-              :close-on-content-click="false"
-              location="end"
-              open-on-hover
-            >
-              <template #activator="{ props: menuProps }">
-                <v-btn
-                  v-bind="menuProps"
-                  prepend-icon="mdi-format-list-bulleted"
-                  size="small"
-                  variant="tonal"
-                >
-                  {{ item.items.length }}
-                </v-btn>
-              </template>
+    <!-- Large screens: table -->
+    <v-card v-if="lgAndUp" variant="flat">
+      <v-data-table
+        :headers="headers"
+        hover
+        :items="filteredInvoices"
+        :loading="loading"
+      >
+        <template #loading>
+          <v-skeleton-loader type="table-row@10" />
+        </template>
 
-              <v-card
-                border
-                class="items-popover"
-                elevation="8"
-                min-width="420"
-              >
-                <v-card-item>
-                  <v-card-title>{{ item.invoiceNumber }}</v-card-title>
-                  <v-card-subtitle>{{ item.customer?.name }}</v-card-subtitle>
-                </v-card-item>
+        <template #item.invoiceNumber="{ item }">
+          <div class="font-weight-medium text-no-wrap">
+            {{ item.invoiceNumber }}
+          </div>
 
-                <v-divider />
+          <div class="text-caption text-medium-emphasis">
+            {{ formatDate(item.issueDate) }}
+          </div>
+        </template>
 
-                <v-table>
-                  <thead>
-                    <tr>
-                      <th class="text-end">Qty</th>
-                      <th>Item</th>
-                      <th class="text-end">Unit</th>
-                      <th class="text-end">Total</th>
-                    </tr>
-                  </thead>
+        <template #item.customer.name="{ item }">
+          <div class="py-2 cell-customer">
+            <div class="font-weight-medium">{{ item.customer?.name }}</div>
 
-                  <tbody>
-                    <tr
-                      v-for="i in item.items"
-                      :key="i.id"
-                      :class="{ 'text-medium-emphasis': !i.productId }"
-                    >
-                      <td class="text-end text-no-wrap">{{ i.quantity }} ×</td>
-                      <td>{{ i.description }}</td>
-
-                      <td class="text-end text-no-wrap amount">
-                        {{ formatPrice(i.unitPrice) }}
-                      </td>
-
-                      <td class="text-end text-no-wrap amount">
-                        {{ formatPrice(i.lineTotal) }}
-                      </td>
-                    </tr>
-                  </tbody>
-
-                  <tfoot>
-                    <tr>
-                      <td class="font-weight-bold" colspan="3">Sum</td>
-
-                      <td class="text-end text-no-wrap amount font-weight-bold">
-                        {{ formatPrice(item.subtotal) }}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </v-table>
-              </v-card>
-            </v-menu>
-          </template>
-
-          <template #item.checks="{ item }">
-            <v-icon
-              :color="
-                item.items.some((i: any) => i.description.includes('Versand'))
-                  ? 'green'
-                  : 'yellow'
+            <div
+              v-if="
+                item.customer?.contactName &&
+                item.customer.contactName !== item.customer.name
               "
-              :icon="
-                item.items.some((i: any) => i.description.includes('Versand'))
-                  ? 'mdi-check-circle-outline'
-                  : 'mdi-alert'
-              "
-              size="large"
-            />
-          </template>
-
-          <template #item.customer.email="{ value }">
-            <a v-if="value" :href="`mailto:${value}`">{{ value }}</a>
-          </template>
-
-          <template #item.customer.countryCode="{ value }">
-            <span class="ms-2">{{ value }}</span>
-
-            <span
-              class="ml-4"
-              :class="`fi fi-${value.toLowerCase()}`"
-              style="border-radius: 2px"
-            />
-          </template>
-
-          <template #item.actions="{ item }">
-            <div class="actions">
-              <!-- Invoice -->
-              <div class="action-group">
-                <ActionButton
-                  action="sendInvoice"
-                  :action-id="item.id"
-                  color="#1982c4"
-                  :disabled="!item.customer.email"
-                  icon="mdi-email-fast"
-                  tooltip="Send invoice as e-mail"
-                  @click="requestSendInvoice(item)"
-                />
-
-                <ActionButton
-                  action="printInvoice"
-                  :action-id="item.id"
-                  color="#1982c4"
-                  :disabled="item.status !== 'paid'"
-                  icon="mdi-printer-outline"
-                  tooltip="Print invoice"
-                  variant="tonal"
-                  @click="printInvoice(item.id)"
-                />
-              </div>
-
-              <v-divider vertical />
-
-              <!-- Payment -->
-              <div class="action-group">
-                <SpeedDialButton
-                  :action-id="item.id"
-                  :actions="[
-                    {
-                      icon: paypalIcon,
-                      color: 'grey-darken-3',
-                      action: 'markInvoicePaid',
-                      onClick: () => markInvoicePaid(item.id, 'PayPal'),
-                    },
-                    {
-                      icon: sparkasseIcon,
-                      color: 'grey-darken-3',
-                      action: 'markInvoicePaid',
-                      onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
-                    },
-                  ]"
-                  color="#8ac926"
-                  :disabled="item.status !== 'sent'"
-                />
-              </div>
-
-              <v-divider vertical />
-
-              <!-- Shipping -->
-              <div class="action-group">
-                <ShippingButton
-                  :country-code="item.customer.countryCode"
-                  :disabled="!!item.label || item.status !== 'paid'"
-                  :invoice-id="item.id"
-                />
-
-                <ActionButton
-                  action="printLabel"
-                  :action-id="item.invoiceNumber"
-                  color="blue-grey-darken-2"
-                  :disabled="!item.label"
-                  icon="mdi-printer"
-                  :tooltip="
-                    item.label
-                      ? `Print shipping label (${printerNames[item.label.printer] ?? item.label.printer})`
-                      : 'Print shipping label'
-                  "
-                  variant="tonal"
-                  @click="printLabel(item.invoiceNumber)"
-                />
-
-                <ActionButton
-                  action="cancelLabel"
-                  :action-id="item.invoiceNumber"
-                  color="#ff595e"
-                  :disabled="
-                    !item.label || item.label.carrier === 'internetmarke'
-                  "
-                  icon="mdi-cancel"
-                  tooltip="Cancel shipping label"
-                  variant="tonal"
-                  @click="confirmCancelLabel(item.invoiceNumber)"
-                />
-
-                <v-tooltip location="top" text="Track shipment">
-                  <template #activator="{ props: tooltipProps }">
-                    <v-btn
-                      v-bind="tooltipProps"
-                      class="ma-1"
-                      color="blue-grey-darken-2"
-                      :disabled="!item.label?.tracking_url"
-                      :href="item.label?.tracking_url"
-                      icon="mdi-truck-fast"
-                      target="_blank"
-                      variant="tonal"
-                    />
-                  </template>
-                </v-tooltip>
-              </div>
-
-              <v-divider vertical />
-
-              <!-- Done -->
-              <div class="action-group">
-                <ActionButton
-                  action="markInvoiceComplete"
-                  :action-id="item.id"
-                  color="#7209b7"
-                  :disabled="item.status !== 'paid'"
-                  icon="mdi-check"
-                  tooltip="Mark as complete"
-                  @click="markInvoiceComplete(item.id)"
-                />
-              </div>
+              class="text-medium-emphasis"
+            >
+              {{ item.customer.contactName }}
             </div>
-          </template>
-        </v-data-table>
-      </v-card>
-    </v-col>
 
-    <v-dialog v-model="sendDialog" max-width="760">
+            <a
+              v-if="item.customer?.email"
+              class="text-caption"
+              :href="`mailto:${item.customer.email}`"
+            >
+              {{ item.customer.email }}
+            </a>
+          </div>
+        </template>
+
+        <template #item.customer.city="{ item }">
+          <div class="py-2">
+            <div>{{ item.customer?.address }}</div>
+
+            <div class="d-flex align-center ga-2">
+              <span
+                v-if="item.customer?.countryCode"
+                class="flag"
+                :class="`fi fi-${item.customer.countryCode.toLowerCase()}`"
+              />
+
+              <span>
+                {{ item.customer?.postalCode }} {{ item.customer?.city }}
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <template #item.status="{ item }">
+          <v-chip :color="statusColor(item.status)" size="small" variant="flat">
+            {{ item.status }}
+            <template v-if="paymentMethod(item)" #append>
+              <v-img
+                class="ml-2"
+                :src="
+                  paymentMethod(item) === 'PayPal' ? paypalIcon : sparkasseIcon
+                "
+                width="16"
+              />
+            </template>
+          </v-chip>
+        </template>
+
+        <template #item.subtotal="{ value }">
+          <span class="amount text-no-wrap">{{ formatPrice(value) }}</span>
+        </template>
+
+        <template #item.items="{ item }">
+          <div class="cell-items py-2">
+            <div
+              v-for="i in item.items"
+              :key="i.id"
+              class="item-line"
+              :class="{ 'text-medium-emphasis': !i.productId }"
+            >
+              <span class="text-no-wrap">{{ i.quantity }} ×</span>
+              <span class="item-description">{{ i.description }}</span>
+
+              <span class="amount text-no-wrap">
+                {{ formatPrice(i.lineTotal) }}
+              </span>
+            </div>
+
+            <v-chip
+              v-if="!hasShipping(item)"
+              class="mt-1"
+              color="warning"
+              prepend-icon="mdi-alert"
+              size="x-small"
+              variant="tonal"
+            >
+              No shipping
+            </v-chip>
+          </div>
+        </template>
+
+        <template #item.actions="{ item }">
+          <InvoiceActions :invoice="item" @send="requestSendInvoice" />
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <!-- Phones and tablets: cards -->
+    <v-data-iterator
+      v-else
+      v-model:page="page"
+      :items="filteredInvoices"
+      :items-per-page="12"
+      :loading="loading"
+    >
+      <template #loader>
+        <v-row dense>
+          <v-col v-for="n in 4" :key="n" cols="12">
+            <v-skeleton-loader type="article, actions" />
+          </v-col>
+        </v-row>
+      </template>
+
+      <template #no-data>
+        <v-card class="pa-8 text-center text-medium-emphasis" variant="flat">
+          No invoices found
+        </v-card>
+      </template>
+
+      <template #default="{ items }">
+        <v-row dense>
+          <v-col v-for="{ raw } in items" :key="raw.id" cols="12">
+            <InvoiceCard :invoice="raw" @send="requestSendInvoice" />
+          </v-col>
+        </v-row>
+      </template>
+
+      <template #footer="{ pageCount }">
+        <v-pagination
+          v-if="pageCount > 1"
+          v-model="page"
+          class="mt-4"
+          density="comfortable"
+          :length="pageCount"
+          :total-visible="xs ? 5 : 7"
+        />
+      </template>
+    </v-data-iterator>
+
+    <v-dialog v-model="sendDialog" :fullscreen="xs" max-width="760">
       <v-card
         :prepend-icon="isResend ? 'mdi-email-sync' : 'mdi-email-fast'"
         :subtitle="`To ${email.recipient ?? sendInvoiceItem?.customer?.email}`"
@@ -379,48 +281,41 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-row>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useDisplay } from "vuetify";
 import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
-import ActionButton from "@/components/ActionButton.vue";
 import Internetmarke from "@/components/Internetmarke.vue";
-import ShippingButton from "@/components/ShippingButton.vue";
-import SpeedDialButton from "@/components/SpeedDialButton.vue";
+import InvoiceActions from "@/components/InvoiceActions.vue";
+import InvoiceCard from "@/components/InvoiceCard.vue";
+import {
+  formatDate,
+  formatPrice,
+  hasShipping,
+  paymentMethod,
+  statusColor,
+  statusColors,
+} from "@/invoice";
 import { type InvoiceEmail, useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
-const {
-  printLabel,
-  cancelLabel,
-  markInvoicePaid,
-  markInvoiceComplete,
-  fetchInvoices,
-  printInvoice,
-  previewInvoiceEmail,
-  sendInvoice,
-  updatePayments,
-} = appStore;
+const { fetchInvoices, previewInvoiceEmail, sendInvoice, updatePayments } =
+  appStore;
 
-// colors from https://coolors.co/palette/ff595e-ffca3a-8ac926-1982c4-6a4c93
+// The table needs the width of a large screen, smaller ones get cards
+const { lgAndUp, xs } = useDisplay();
 
-const status_colors = {
-  complete: "#7209b7",
-  draft: "#1982c4",
-  sent: "#ffca3a",
-  paid: "#8ac926",
-  voided: "#8da9c4",
-} as const;
-
-const printerNames: Record<string, string> = {
-  ql710: "QL-710W",
-  ql1110: "QL-1110NWB",
-};
+const loading = computed(
+  () =>
+    isLoading.value?.action === "fetchInvoices" ||
+    (isLoading.value === null && invoices.value.length === 0),
+);
 
 // Show the email before sending, so subject and text can be adjusted, and
 // warn when the invoice already went out
@@ -448,67 +343,51 @@ function confirmSend() {
   }
 }
 
-function confirmCancelLabel(invoice_number: string) {
-  if (window.confirm(`Cancel the shipping label for ${invoice_number}?`)) {
-    cancelLabel(invoice_number);
-  }
-}
-
-const selectedStates = ref(["draft", "sent", "paid"]);
+const selectedStates = ref<string[]>(["draft", "sent", "paid"]);
+const search = ref<string | null>("");
+const page = ref(1);
 
 const statusCounts = computed(() => {
-  const counts = Object.keys(status_colors).reduce(
-    (acc, status) => {
-      acc[status] = 0;
-      return acc;
-    },
-    {} as Record<string, number>,
+  const counts = Object.fromEntries(
+    Object.keys(statusColors).map((status) => [status, 0]),
   );
-
   for (const item of invoices.value) {
     if (item.status in counts) {
       counts[item.status]++;
     }
   }
-
   return counts;
 });
 
 const filteredInvoices = computed(() => {
-  return invoices.value.filter((item) =>
-    selectedStates.value.includes(item.status),
+  const term = (search.value ?? "").trim().toLowerCase();
+  return invoices.value.filter(
+    (item) =>
+      selectedStates.value.includes(item.status) &&
+      (!term ||
+        [
+          item.invoiceNumber,
+          item.customer?.name,
+          item.customer?.contactName,
+          item.customer?.email,
+          item.customer?.city,
+        ].some((value) => value?.toLowerCase().includes(term))),
   );
 });
 
-// Same format as the Sum column
-function formatPrice(value: number) {
-  return `${(value ?? 0).toFixed(2)} €`;
-}
-
-function getPaymentMethod(item: any) {
-  return item.statusHistory.find((entry: any) => entry.paymentMethod)
-    ?.paymentMethod;
-}
+// A changed filter starts again on the first page of cards
+watch([selectedStates, search], () => {
+  page.value = 1;
+});
 
 const headers = [
-  { title: "Invoice number", key: "invoiceNumber", align: "start" },
-  { title: "Shipping", key: "checks", align: "center", sortable: false },
-  { title: "Status", key: "status", align: "center", sortable: false },
-  { title: "Sum", key: "subtotal", align: "start" },
-  { title: "Items", key: "items", align: "center", sortable: false },
+  { title: "Invoice", key: "invoiceNumber", align: "start" },
   { title: "Customer", key: "customer.name", align: "start" },
-  { title: "Contact", key: "customer.contactName", align: "start" },
-  { title: "Email", key: "customer.email", align: "start" },
-  { title: "Address", key: "customer.address", align: "start" },
-  { title: "City", key: "customer.city", align: "start" },
-  { title: "Postal code", key: "customer.postalCode", align: "start" },
-  { title: "Country", key: "customer.countryCode", align: "start" },
-  {
-    title: "Actions",
-    key: "actions",
-    align: "center",
-    sortable: false,
-  },
+  { title: "Address", key: "customer.city", align: "start" },
+  { title: "Status", key: "status", align: "center" },
+  { title: "Sum", key: "subtotal", align: "end" },
+  { title: "Items", key: "items", align: "start", sortable: false },
+  { title: "Actions", key: "actions", align: "center", sortable: false },
 ] as const;
 
 onMounted(() => {
@@ -517,43 +396,71 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.actions {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.search {
+  flex: 1 1 260px;
+  max-width: 360px;
 }
 
-.action-group {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
+.status-filter .v-chip {
+  font-weight: 500;
 }
 
-.actions .v-divider {
-  align-self: stretch;
-  margin-block: 12px;
+.status-filter .v-chip:not(.selected) {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  border-color: rgba(var(--v-border-color), 0.25);
 }
 
-.items-popover {
-  border-color: rgba(var(--v-border-color), 0.25) !important;
+.status-filter .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
-.items-popover th {
-  font-weight: 600 !important;
-}
-
-.items-popover td,
-.items-popover th {
-  font-size: 0.95rem;
-}
-
-.items-popover .amount {
+.status-filter .count {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
   font-variant-numeric: tabular-nums;
+  background: rgba(var(--v-theme-on-surface), 0.08);
 }
 
-.items-popover tfoot td {
-  border-top: 2px solid rgba(var(--v-border-color), var(--v-border-opacity));
+/* On a colored chip a darkened pill works for light and dark status colors */
+.status-filter .selected .count {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.cell-items {
+  min-width: 260px;
+  max-width: 380px;
+  font-size: 0.875rem;
+}
+
+.item-line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.item-description {
+  overflow-wrap: anywhere;
+}
+
+.cell-customer {
+  max-width: 260px;
+}
+
+.flag {
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
 }
 </style>
