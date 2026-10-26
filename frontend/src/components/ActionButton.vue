@@ -24,7 +24,7 @@ const { isLoading } = storeToRefs(store);
       <v-btn
         v-bind="tooltipProps"
         class="ma-1"
-        :color="color"
+        :color="disabled ? undefined : color"
         :disabled="disabled"
         :icon="icon"
         :loading="isLoading?.action === action && isLoading?.id === actionId"

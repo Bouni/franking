@@ -29,7 +29,7 @@ const { isLoading } = storeToRefs(store);
           <v-btn
             v-bind="mergeProps(dialProps, tooltipProps)"
             class="ma-1"
-            :color="color ?? 'green'"
+            :color="disabled ? undefined : (color ?? 'green')"
             :disabled="disabled"
             icon="mdi-currency-eur"
           />
