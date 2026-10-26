@@ -54,6 +54,9 @@ importers:
       eslint:
         specifier: ^10.13.0
         version: 10.13.0(supports-color@8.1.1)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.13.0(supports-color@8.1.1))
       eslint-config-vuetify:
         specifier: ^4.7.2
         version: 4.7.2(eslint@10.13.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
@@ -863,6 +866,12 @@ packages:
     resolution: {integrity: sha512-JhYC+V7qEDiCDsbJcVP8fxNc62fk4+i91YLP/YvmVHlkaQ8Xo99olYN8MO5COdxl7onGlsrfZVONe5NYsZP1UA==}
     peerDependencies:
       eslint: ^9.5.0 || ^10.0.0
+
+  eslint-config-prettier@10.1.8:
+    resolution: {integrity: sha512-82GZUjRS0p/jganf6q1rEO25VSoHH0hKPCTrgillPjdI/3bgBhAE1QzHrHTizjpRvy6pGAvKjDJtk2pF9NDq8w==}
+    hasBin: true
+    peerDependencies:
+      eslint: '>=7.0.0'
 
   eslint-config-vuetify@4.7.2:
     resolution: {integrity: sha512-61q06LqKSXtlsdCJB41aqPG3kxrmgewLt3mlKuTyEULbGU+tCg4T2r0XwoKAxnWr1P/Z4m643q0/lmQcyAVzMA==}
@@ -2800,6 +2809,10 @@ snapshots:
   eslint-config-flat-gitignore@2.4.0(eslint@10.13.0(supports-color@8.1.1)):
     dependencies:
       '@eslint/compat': 2.1.1(eslint@10.13.0(supports-color@8.1.1))
+      eslint: 10.13.0(supports-color@8.1.1)
+
+  eslint-config-prettier@10.1.8(eslint@10.13.0(supports-color@8.1.1)):
+    dependencies:
       eslint: 10.13.0(supports-color@8.1.1)
 
   eslint-config-vuetify@4.7.2(eslint@10.13.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3):

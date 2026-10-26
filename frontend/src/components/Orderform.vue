@@ -10,10 +10,13 @@
               a real webshop for it. Therefore I created this little order form
               to help me process orders more conveniently.
             </li>
+
             <li>
               Once you placed an order, I'll manually send you an invoice.
             </li>
+
             <li>I only send out invoices if I have boards available.</li>
+
             <li>
               Once you paid the invoice, I usually ship the next business day.
             </li>
@@ -21,6 +24,7 @@
         </v-card-text>
       </v-card>
     </v-col>
+
     <v-col cols="12" lg="6">
       <v-card title="FAQ">
         <v-card-text>
@@ -32,6 +36,7 @@
                     <v-icon icon="mdi-chat-question" /> What connector type do I
                     need?
                   </div>
+
                   <div>
                     <v-icon icon="mdi-chat-alert" /> You need one 3-pin RAST
                     connector for the board itself. You will also need a 3-pin
@@ -42,6 +47,7 @@
                 </v-card-text>
               </v-card>
             </v-col>
+
             <v-col cols="12" lg="6">
               <v-card variant="tonal">
                 <v-card-text>
@@ -49,6 +55,7 @@
                     <v-icon icon="mdi-chat-question" /> Can you sell me ready to
                     use RAST connection cables?
                   </div>
+
                   <div>
                     <v-icon icon="mdi-chat-alert" /> Unfortunately, no. Not at
                     this point, maybe I can in the future but there are no plans
@@ -62,85 +69,87 @@
         </v-card-text>
       </v-card>
     </v-col>
-    <v-col cols="12" lg="2" class="d-none d-lg-block"> </v-col>
+
+    <v-col class="d-none d-lg-block" cols="12" lg="2" />
+
     <v-col cols="12" lg="8">
       <v-card class="pa-5">
         <v-form ref="form" v-model="isFormValid" @submit.prevent="handleSubmit">
-          <v-card title="Adress data" variant="outlined" class="pa-4 mb-3">
+          <v-card class="pa-4 mb-3" title="Adress data" variant="outlined">
             <v-row density="compact">
               <v-col cols="12" lg="6">
                 <v-text-field
                   v-model="order.firstname"
-                  label="First Name"
                   hint="* Required field"
+                  label="First Name"
                   persistent-hint
                   :rules="[rules.required]"
-                ></v-text-field>
+                />
               </v-col>
 
               <v-col cols="12" lg="6">
                 <v-text-field
                   v-model="order.lastname"
-                  label="Last Name"
                   hint="* Required field"
+                  label="Last Name"
                   persistent-hint
                   :rules="[rules.required]"
-                ></v-text-field>
+                />
               </v-col>
 
               <v-col cols="12" lg="6">
                 <v-text-field
                   v-model="order.email"
-                  label="Email Address"
                   hint="* Required field"
+                  label="Email Address"
                   persistent-hint
                   :rules="[rules.required, rules.email]"
-                ></v-text-field>
+                />
               </v-col>
 
-              <v-col cols="12" lg="6"> </v-col>
+              <v-col cols="12" lg="6" />
 
               <v-col cols="12" lg="6">
                 <v-text-field
                   v-model="order.address"
-                  label="Address"
                   hint="* Required field"
+                  label="Address"
                   persistent-hint
                   :rules="[rules.required]"
-                ></v-text-field>
+                />
               </v-col>
 
               <v-col cols="12" lg="6">
                 <v-text-field
                   v-model="order.city"
-                  label="City"
                   hint="* Required field"
+                  label="City"
                   persistent-hint
                   :rules="[rules.required]"
-                ></v-text-field>
+                />
               </v-col>
 
               <v-col cols="12" lg="6">
                 <v-text-field
                   v-model="order.postalcode"
-                  label="Postal code"
                   hint="* Required field"
+                  label="Postal code"
                   persistent-hint
                   :rules="[rules.required]"
-                ></v-text-field>
+                />
               </v-col>
 
               <v-col cols="12" lg="6">
                 <v-autocomplete
                   v-model="order.country"
-                  :items="COUNTRIES"
+                  clearable
+                  hint="* Required field"
                   item-title="name"
                   item-value="code"
+                  :items="COUNTRIES"
                   label="Select Country"
-                  :rules="[rules.required]"
-                  hint="* Required field"
                   persistent-hint
-                  clearable
+                  :rules="[rules.required]"
                 >
                   <template #item="{ props, item }">
                     <v-list-item v-bind="props" :title="item.name">
@@ -149,16 +158,18 @@
                           class="text-h6 mr-2"
                           :class="`fi fi-${item.code.toLowerCase()}`"
                           style="border-radius: 2px"
-                        ></span>
+                        />
                       </template>
                     </v-list-item>
                   </template>
+
                   <template #selection="{ item }">
                     <span
                       class="text-h6 mr-2"
                       :class="`fi fi-${order.country.toLowerCase()}`"
                       style="border-radius: 2px"
-                    ></span>
+                    />
+
                     <span>{{ item.name }}</span>
                   </template>
                 </v-autocomplete>
@@ -166,56 +177,67 @@
             </v-row>
           </v-card>
 
-          <v-card title="Items" variant="outlined" class="pa-4">
+          <v-card class="pa-4" title="Items" variant="outlined">
             <v-row
               v-for="item in order.items"
-              key="item.article_number"
+              :key="item.article_number"
               density="compact"
             >
-              <v-col cols="12" sm="6" lg="6">
+              <v-col cols="12" lg="6" sm="6">
                 <div class="item-caption">{{ item.name }}</div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2">
+
+              <v-col cols="12" lg="2" sm="2">
                 <div class="item-caption">{{ item.price.toFixed(2) }}€</div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2">
+
+              <v-col cols="12" lg="2" sm="2">
                 <div class="item-caption">
                   {{ (item.quantity * item.price).toFixed(2) }}€
                 </div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2">
+
+              <v-col cols="12" lg="2" sm="2">
                 <v-text-field
                   v-model="item.quantity"
                   label="Quantity"
                   type="number"
-                ></v-text-field>
+                />
               </v-col>
             </v-row>
+
             <v-row density="compact">
-              <v-col cols="12" sm="6" lg="6">
+              <v-col cols="12" lg="6" sm="6">
                 <div class="item-caption">Shipping</div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2"> </v-col>
-              <v-col cols="12" sm="2" lg="2">
+
+              <v-col cols="12" lg="2" sm="2" />
+
+              <v-col cols="12" lg="2" sm="2">
                 <div class="item-caption">{{ shipping.toFixed(2) }}€</div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2"> </v-col>
+
+              <v-col cols="12" lg="2" sm="2" />
             </v-row>
+
             <v-row density="compact">
-              <v-col cols="12" sm="6" lg="6">
+              <v-col cols="12" lg="6" sm="6">
                 <div class="item-caption">Sum</div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2"> </v-col>
-              <v-col cols="12" sm="2" lg="2">
+
+              <v-col cols="12" lg="2" sm="2" />
+
+              <v-col cols="12" lg="2" sm="2">
                 <div class="item-caption">{{ grandTotal.toFixed(2) }}€</div>
               </v-col>
-              <v-col cols="12" sm="2" lg="2"> </v-col>
+
+              <v-col cols="12" lg="2" sm="2" />
             </v-row>
           </v-card>
 
           <v-row density="compact">
-            <v-col cols="12" class="text-center">
-              <v-btn type="submit" color="primary" class="mt-4">
+            <v-col class="text-center" cols="12">
+              <v-btn class="mt-4" color="primary" type="submit">
                 Submit Order
               </v-btn>
             </v-col>
@@ -223,27 +245,15 @@
         </v-form>
       </v-card>
     </v-col>
-    <v-col cols="12" lg="2" class="d-none d-lg-block"> </v-col>
+
+    <v-col class="d-none d-lg-block" cols="12" lg="2" />
   </v-row>
 </template>
 
-<style scoped>
-.item-caption {
-  background-color: #2a2a2a;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-  height: 56px;
-  line-height: 24px;
-  padding-top: 15px;
-  padding-left: 10px;
-}
-</style>
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { COUNTRIES } from "@/constants/countries";
 import { useOrderStore } from "@/store/order";
-import { storeToRefs } from "pinia";
-import { COUNTRIES, type Country } from "@/constants/countries";
 
 const orderStore = useOrderStore();
 
@@ -301,7 +311,8 @@ const grandTotal = computed(() => {
 const rules = {
   required: (val: unknown) => !!val || "This field is required.",
   email: (val: string) =>
-    /.+@.+\..+/.test(val) || "Must be a valid email address.",
+    /.[^\n\r@\u2028\u2029]*@.+\..+/.test(val) ||
+    "Must be a valid email address.",
   minQuantity: (val: number) => val >= 1 || "Quantity must be at least 1.",
 };
 
@@ -309,16 +320,28 @@ type FormInstance = {
   validate: () => Promise<{ valid: boolean }>;
 };
 
-const handleSubmit = async () => {
+async function handleSubmit() {
   const formRef = form.value as FormInstance | null;
   const { valid } = (await formRef?.validate()) ?? { valid: false };
 
   if (!valid) return;
 
   console.log("Order submitted successfully:", order);
-};
+}
 
 onMounted(() => {
   orderStore.fetchProducts();
 });
 </script>
+
+<style scoped>
+.item-caption {
+  background-color: #2a2a2a;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  height: 56px;
+  line-height: 24px;
+  padding-top: 15px;
+  padding-left: 10px;
+}
+</style>

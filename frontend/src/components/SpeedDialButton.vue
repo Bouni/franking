@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { useAppStore, type LoadingState } from "@/store/app";
 import { mergeProps } from "vue";
+import { type LoadingState, useAppStore } from "@/store/app";
 
 interface DialAction {
   icon: string; // The imported path (e.g., /src/assets/paypal.svg)
@@ -10,7 +10,7 @@ interface DialAction {
   onClick: () => void;
 }
 
-const props = defineProps<{
+defineProps<{
   actionId: string | number;
   actions: DialAction[];
   disabled?: boolean;
@@ -23,30 +23,29 @@ const { isLoading } = storeToRefs(store);
 <template>
   <v-speed-dial location="top center" transition="scale-transition">
     <template #activator="{ props: dialProps }">
-      <v-tooltip text="Mark Invoice as paid" location="top">
+      <v-tooltip location="top" text="Mark Invoice as paid">
         <template #activator="{ props: tooltipProps }">
           <v-btn
             v-bind="mergeProps(dialProps, tooltipProps)"
             color="green"
-            icon="mdi-currency-eur"
             :disabled="disabled"
-          >
-          </v-btn>
+            icon="mdi-currency-eur"
+          />
         </template>
       </v-tooltip>
     </template>
 
     <v-btn
-      icon
       v-for="item in actions"
       :key="item.action"
-      :color="item.color"
-      :loading="isLoading?.action === item.action && isLoading?.id === actionId"
       class="ma-2"
+      :color="item.color"
+      icon
+      :loading="isLoading?.action === item.action && isLoading?.id === actionId"
       size="large"
       @click="item.onClick"
     >
-      <v-img :src="item.icon" width="20" height="20" />
+      <v-img height="20" :src="item.icon" width="20" />
     </v-btn>
   </v-speed-dial>
 </template>

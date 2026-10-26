@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { useAppStore, type LoadingState } from "@/store/app";
+import { type LoadingState, useAppStore } from "@/store/app";
 
-const props = defineProps<{
+defineProps<{
   icon: string;
   color: string;
   tooltip: string;
@@ -18,15 +18,15 @@ const { isLoading } = storeToRefs(store);
 </script>
 
 <template>
-  <v-tooltip :text="tooltip" location="top">
+  <v-tooltip location="top" :text="tooltip">
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"
-        :icon="icon"
+        class="ma-2"
         :color="color"
         :disabled="disabled"
+        :icon="icon"
         :loading="isLoading?.action === action && isLoading?.id === actionId"
-        class="ma-2"
         @click="emit('click')"
       />
     </template>

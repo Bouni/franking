@@ -8,9 +8,9 @@
 import type { App } from "vue";
 
 // Plugins
-import vuetify from "./vuetify";
 import pinia from "./pinia";
 import router from "./router";
+import vuetify from "./vuetify";
 
 export function registerPlugins(app: App) {
   app.use(router);

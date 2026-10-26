@@ -2,10 +2,10 @@ prepend-icon="mdi-cash0
 <template>
   <v-row>
     <v-col cols="12">
-      <v-chip variant="flat" color="#ffcc00" size="large">
+      <v-chip color="#ffcc00" size="large" variant="flat">
         {{ (internetmarke.balance / 100).toFixed(2) }} €
-        <template v-slot:prepend>
-          <v-img width="32" :src="postIcon" class="mr-2"></v-img>
+        <template #prepend>
+          <v-img class="mr-2" :src="postIcon" width="32" />
         </template>
       </v-chip>
     </v-col>
@@ -13,10 +13,10 @@ prepend-icon="mdi-cash0
 </template>
 
 <script setup lang="ts">
-import { useAppStore } from "@/store/app";
 import { storeToRefs } from "pinia";
 import { onMounted } from "vue";
 import postIcon from "@/assets/Post.svg";
+import { useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
 const { internetmarke } = storeToRefs(appStore);

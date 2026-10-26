@@ -5,6 +5,7 @@
         <v-app-bar>
           <v-app-bar-title>Franking</v-app-bar-title>
         </v-app-bar>
+
         <Invoices />
       </v-container>
     </v-main>
