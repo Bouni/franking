@@ -18,12 +18,32 @@ QUOTE_CACHE_S = 3600
 _quotes: dict[str, tuple[float, dict]] = {}
 
 MAX_QUANTITY = 99
+
+# Countries where carriers (DHL) need a state/province. Stored in Invio as
+# "region" (ISO 3166-2 code without the country prefix, e.g. CA, NSW, ON)
+REGION_COUNTRIES = {"US", "CA", "AU", "ZA"}
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 PHONE_RE = re.compile(r"^\+?[0-9 ()/-]{4,30}$")
 
 
 class OrderError(Exception):
     pass
+
+
+def regions(country_code: str) -> list:
+    """States/provinces of a country, empty if the country doesn't need one"""
+    country = country_code.upper()
+    if country not in REGION_COUNTRIES:
+        return []
+    subdivisions = pycountry.subdivisions.get(country_code=country) or []
+    return sorted(
+        (
+            {"code": s.code.split("-", 1)[1], "name": s.name}
+            for s in subdivisions
+            if not s.parent_code and s.type != "Outlying area"
+        ),
+        key=lambda r: r["name"],
+    )
 
 
 def rate_limited(client_ip: str) -> bool:
@@ -76,6 +96,17 @@ def validate(data: dict, products: list) -> tuple[dict, list]:
     if not pycountry.countries.get(alpha_2=values["country"].upper()):
         raise OrderError("Country is invalid")
     values["country"] = values["country"].upper()
+
+    # State/province, only for countries that need it
+    region_codes = {r["code"] for r in regions(values["country"])}
+    values["region"] = str(data.get("region") or "").strip().upper()
+    if region_codes:
+        if not values["region"]:
+            raise OrderError("State / Province is required")
+        if values["region"] not in region_codes:
+            raise OrderError("State / Province is invalid")
+    else:
+        values["region"] = ""
 
     # Optional fields
     values["contact"] = str(data.get("contact") or "").strip()
@@ -145,6 +176,7 @@ def find_customer(customers: list, customer: dict) -> dict | None:
                 "address",
                 "postalCode",
                 "city",
+                "region",
                 "countryCode",
             )
         ):

@@ -293,6 +293,26 @@
                     </template>
                   </v-autocomplete>
                 </v-col>
+
+                <v-col v-if="regions.length > 0" cols="12">
+                  <v-autocomplete
+                    v-model="order.region"
+                    autocomplete="address-level1"
+                    hint="Required by the carrier for this country"
+                    item-title="name"
+                    item-value="code"
+                    :items="regions"
+                    label="State / Province"
+                    persistent-hint
+                    prepend-inner-icon="mdi-map-marker"
+                    :rules="[rules.required]"
+                    variant="outlined"
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props" :subtitle="item.code" />
+                    </template>
+                  </v-autocomplete>
+                </v-col>
               </v-row>
             </v-card-text>
           </v-card>
@@ -433,7 +453,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { COUNTRIES } from "@/constants/countries";
-import { type Shipping, useOrderStore } from "@/store/order";
+import { type Region, type Shipping, useOrderStore } from "@/store/order";
 
 const orderStore = useOrderStore();
 
@@ -493,6 +513,7 @@ const order = ref({
   city: "",
   postalcode: "",
   country: "",
+  region: "",
 });
 const website = ref("");
 
@@ -541,6 +562,17 @@ watch(
 // Shipping costs depend on the destination country
 const shipping = ref<Shipping | null>(null);
 const shippingLoading = ref(false);
+
+// State/province list for countries whose carriers need it
+const regions = ref<Region[]>([]);
+
+watch(
+  () => order.value.country,
+  async (country) => {
+    order.value.region = "";
+    regions.value = country ? await orderStore.fetchRegions(country) : [];
+  },
+);
 
 watch(
   () => order.value.country,

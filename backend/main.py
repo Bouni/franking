@@ -257,6 +257,7 @@ async def create_shipping_label(data: dict):
         city=customer["city"],
         postcode=customer["postalCode"],
         country=customer["countryCode"],
+        region=customer.get("region") or "",
         phone=customer.get("phone"),
         email=customer.get("email") or "",
     )
@@ -388,6 +389,11 @@ async def order_shipping(country: str):
     )
 
 
+@app.get("/api/order/regions")
+async def order_regions(country: str):
+    return JSONResponse({"regions": order.regions(country)})
+
+
 @app.post("/api/order/submit")
 async def submit_order(data: dict, request: Request):
     # Bots fill in the hidden "website" field, pretend everything worked
@@ -431,6 +437,8 @@ async def submit_order(data: dict, request: Request):
             "address": values["address"],
             "postalCode": values["postalcode"],
             "city": values["city"],
+            # Ignored by Invio versions without the region field
+            "region": values["region"],
             "countryCode": values["country"],
         }
         total = sum(i["unitPrice"] * i["quantity"] for i in items)

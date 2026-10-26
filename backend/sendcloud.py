@@ -202,6 +202,8 @@ class Sendcloud:
             },
             "label_details": {"mime_type": "image/png", "dpi": 300},
         }
+        if receiver.region:
+            payload["to_address"]["state_province_code"] = receiver.region
         if receiver.phone:
             payload["to_address"]["phone_number"] = receiver.phone
         if receiver.email:
