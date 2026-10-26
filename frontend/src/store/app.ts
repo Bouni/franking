@@ -22,9 +22,12 @@ export interface LoadingState {
 }
 
 export interface Settings {
+  invoice_email_subject: string;
+  invoice_email_body: string;
   tracking_email_enabled: boolean;
   tracking_email_subject: string;
   tracking_email_body: string;
+  invoice_placeholders?: Record<string, string>;
   tracking_placeholders?: Record<string, string>;
 }
 

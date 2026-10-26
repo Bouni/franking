@@ -20,15 +20,44 @@ SETTINGS_PATH = Path(
 
 TRACKING_LINK = "{tracking_link}"
 
-# Placeholders that can be used in the tracking email, with a description
-TRACKING_PLACEHOLDERS = {
-    TRACKING_LINK: "Tracking link of the parcel",
-    "{tracking_number}": "Tracking number",
+# Placeholders that can be used in the emails, with a description
+INVOICE_PLACEHOLDERS = {
     "{name}": "Customer name",
     "{invoice_number}": "Invoice number",
 }
+TRACKING_PLACEHOLDERS = {
+    TRACKING_LINK: "Tracking link of the parcel",
+    "{tracking_number}": "Tracking number",
+    **INVOICE_PLACEHOLDERS,
+}
 
 DEFAULTS = {
+    "invoice_email_subject": "Invoice {invoice_number} (BSH-Board)",
+    "invoice_email_body": textwrap.dedent("""
+        Hi {name},
+
+        Im Anhang findest du die Rechnung für deine Bestellung.
+        Diese beinhaltet Zahlungsinformationen für Banküberweisungen und PayPal.
+
+        Sobald ich die Zahlung erhalten habe versende ich in aller Regel am nächsten Werktag.
+
+        Vielen Dank für die Bestellung!
+
+        -------------------------------------------------------------------------------------
+
+        Attached you find the invoice for your order.
+        It contains payment info for bank transfer as well as for PayPal.
+
+        As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
+
+        Thank you very much for your Order!
+
+        -------------------------------------------------------------------------------------
+
+        Bouni
+
+        P.S. Sorry to those of you who are non german speakers, my invoicing software is limited when it comes to localization and you might get the invoice not in yor language but in german or english 😅
+        """).strip(),
     "tracking_email_enabled": True,
     "tracking_email_subject": "Your order {invoice_number} has been shipped (BSH-Board)",
     "tracking_email_body": textwrap.dedent("""

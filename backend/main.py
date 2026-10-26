@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import re
-import textwrap
 from pathlib import Path
 
 import anyio
@@ -175,32 +174,13 @@ async def print_invoice(data: dict):
 async def send_invoice_email(data: dict):
     async with await Invio.create() as invio:
         invoice_data = await invio.get_invoice_data(data.get("invoice_id", ""))
-        subject = f"Invoice {invoice_data.get('invoiceNumber')} (BSH-Board)"
-        body = textwrap.dedent(f"""
-            Hi {invoice_data.get("customer", {}).get("name")},
-    
-            Im Anhang findest du die Rechnung für deine Bestellung.
-            Diese beinhaltet Zahlungsinformationen für Banküberweisungen und PayPal.
-    
-            Sobald ich die Zahlung erhalten habe versende ich in aller Regel am nächsten Werktag.
-    
-            Vielen Dank für die Bestellung!
-    
-            -------------------------------------------------------------------------------------
-    
-            Attached you find the invoice for your order.
-            It contains payment info for bank transfer as well as for PayPal.
-    
-            As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
-    
-            Thank you very much for your Order!
-    
-            -------------------------------------------------------------------------------------
-
-            Bouni
-
-            P.S. Sorry to those of you who are non german speakers, my invoicing software is limited when it comes to localization and you might get the invoice not in yor language but in german or english 😅
-            """).strip()
+        config = settings.load()
+        values = {
+            "name": (invoice_data.get("customer") or {}).get("name"),
+            "invoice_number": invoice_data.get("invoiceNumber"),
+        }
+        subject = settings.render(config["invoice_email_subject"], values)
+        body = settings.render(config["invoice_email_body"], values)
         invoice_pdf = await invio.get_invoice_pdf(data.get("invoice_id", ""))
         if DEBUG:
             recipient = (invoice_data.get("customer") or {}).get("email")
@@ -382,6 +362,7 @@ async def send_tracking_email(invoice_data: dict, meta: dict) -> dict:
 async def get_settings():
     return {
         **settings.load(),
+        "invoice_placeholders": settings.INVOICE_PLACEHOLDERS,
         "tracking_placeholders": settings.TRACKING_PLACEHOLDERS,
     }
 
