@@ -16,13 +16,23 @@ export interface LoadingState {
     | "printLabel"
     | "createLabel"
     | "cancelLabel"
-    | "updatePayments";
+    | "updatePayments"
+    | "fetchSettings"
+    | "saveSettings";
+}
+
+export interface Settings {
+  tracking_email_enabled: boolean;
+  tracking_email_subject: string;
+  tracking_email_body: string;
+  tracking_placeholders?: Record<string, string>;
 }
 
 export const useAppStore = defineStore("app", () => {
   const internetmarke = ref({ balance: 0 });
   const invoices = ref<any[]>([]);
   const isLoading = ref<LoadingState | null>(null);
+  const settings = ref<Settings | null>(null);
 
   function updateInvoice(invoice_data: any) {
     invoices.value = invoices.value.map((inv) =>
@@ -212,6 +222,14 @@ export const useAppStore = defineStore("app", () => {
       } else {
         showToast("Invoice not found", "#ff595e", 10);
       }
+      const trackingEmail = response.data.tracking_email;
+      if (trackingEmail) {
+        showToast(
+          trackingEmail.msg,
+          trackingEmail.sent ? "#8ac926" : "#ffca3a",
+          trackingEmail.sent ? 3 : 10,
+        );
+      }
       const response2 = await api.get("/internetmarke/balance");
       internetmarke.value = response2.data;
     } catch (error: any) {
@@ -276,8 +294,46 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
+  async function fetchSettings() {
+    isLoading.value = { id: "", action: "fetchSettings" };
+
+    try {
+      const response = await api.get("/settings");
+      settings.value = response.data;
+    } catch (error: any) {
+      showToast(
+        `Error fetching settings: ${error.message || "Error fetching settings"}`,
+        "#ff595e",
+        10,
+      );
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
+  async function saveSettings(data: Settings) {
+    isLoading.value = { id: "", action: "saveSettings" };
+
+    try {
+      const response = await api.put("/settings", data);
+      settings.value = { ...settings.value, ...response.data };
+      showToast("Settings saved!", "#8ac926", 3);
+    } catch (error: any) {
+      showToast(
+        `Error saving settings: ${error.response?.data?.msg || error.message}`,
+        "#ff595e",
+        10,
+      );
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
   return {
     internetmarke,
+    settings,
+    fetchSettings,
+    saveSettings,
     invoices,
     isLoading,
     fetchBalance,

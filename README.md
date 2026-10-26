@@ -9,6 +9,7 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
   - DHL Kleinpaket for shipments within Germany
   - DHL Warenpost International Premium (with tracking) for international shipments
   - the default method can be overridden per invoice
+  - the tracking link is emailed to the customer, the text is editable in the Settings tab (`{tracking_link}` marks where the link goes)
 - print the DHL labels on a Brother QL-1110NWB (DK-11247, 103x164mm); older Internetmarken still print on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w) (38mm endless)
 - print the invoice on paper
 - Integration with PayPal and Sparkasse (via FinTS) to fetch the latest payment data and update the payment status with that data

@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import order
+import settings
 from internetmarke import Internetmarke
 from invio import Invio, InvioDB
 from mail import Mail
@@ -324,9 +325,73 @@ async def create_shipping_label(data: dict):
 
     label_file(invoice_number, ".json").write_text(json.dumps(meta))
     logging.info(f"Shipping label {code} created for {invoice_number}")
+
+    tracking_email = await send_tracking_email(invoice_data, meta)
+    if tracking_email["sent"]:
+        meta["tracking_email_sent"] = True
+        label_file(invoice_number, ".json").write_text(json.dumps(meta))
     return JSONResponse(
-        {"success": True, "msg": f"Shipping label {code} created", "label": meta}
+        {
+            "success": True,
+            "msg": f"Shipping label {code} created",
+            "label": meta,
+            "tracking_email": tracking_email,
+        }
     )
+
+
+async def send_tracking_email(invoice_data: dict, meta: dict) -> dict:
+    """Mail the tracking link to the customer. The label is already bought at
+    this point, so problems are only reported, never raised."""
+    config = settings.load()
+    if not config["tracking_email_enabled"]:
+        return {"sent": False, "msg": "Tracking email is disabled"}
+    tracking_url = meta.get("tracking_url")
+    if DEBUG:
+        tracking_url = tracking_url or "https://example.com/tracking/DEBUG"
+    if not tracking_url:
+        return {"sent": False, "msg": "Sendcloud returned no tracking link"}
+    customer = invoice_data.get("customer") or {}
+    if not customer.get("email"):
+        return {"sent": False, "msg": "Customer has no email address"}
+
+    values = {
+        "tracking_link": tracking_url,
+        "tracking_number": meta.get("tracking_number"),
+        "name": customer.get("name"),
+        "invoice_number": invoice_data.get("invoiceNumber"),
+    }
+    subject = settings.render(config["tracking_email_subject"], values)
+    body = settings.render(config["tracking_email_body"], values)
+
+    if DEBUG:
+        logging.info(
+            f"DEBUG active, tracking email not sent: '{subject}' to "
+            f"{customer['email']}\n{body}"
+        )
+        return {"sent": False, "msg": "Dry run (DEBUG): tracking email NOT sent"}
+    try:
+        await Mail(subject, body, invoice_data).send_tracking()
+    except Exception as e:  # noqa: BLE001 - the label itself already worked
+        logging.error(f"Tracking email for {values['invoice_number']} failed: {e}")
+        return {"sent": False, "msg": "Tracking email failed, see the log"}
+    return {"sent": True, "msg": f"Tracking email sent to {customer['email']}"}
+
+
+@app.get("/api/settings")
+async def get_settings():
+    return {
+        **settings.load(),
+        "tracking_placeholders": settings.TRACKING_PLACEHOLDERS,
+    }
+
+
+@app.put("/api/settings")
+async def update_settings(data: dict):
+    try:
+        return settings.save(data)
+    except settings.SettingsError as e:
+        return JSONResponse({"success": False, "msg": str(e)}, status_code=400)
 
 
 @app.post("/api/shipping/print")

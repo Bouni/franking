@@ -29,7 +29,9 @@ INVIO_PASSWORD = os.getenv("INVIO_PASSWORD", "")
 
 
 class Mail:
-    def __init__(self, subject: str, body: str, invoice_data: dict, attachment: bytes):
+    def __init__(
+        self, subject: str, body: str, invoice_data: dict, attachment: bytes = b""
+    ):
         self.subject = subject
         self.body = body
         self.invoice_data = invoice_data
@@ -52,8 +54,8 @@ class Mail:
                 except Exception as e:
                     logging.warning(f"Error during IMAP logout: {e}")
 
-    async def send_invoice(self):
-        recipient = self.invoice_data.get("customer", {}).get("email")
+    def _message(self) -> MIMEMultipart:
+        recipient = (self.invoice_data.get("customer") or {}).get("email")
 
         if not recipient:
             raise Exception("No mail address found")
@@ -66,6 +68,29 @@ class Mail:
         message["Message-ID"] = make_msgid(domain=EMAIL_SENDER.split("@")[-1])
         body_part = MIMEText(self.body)
         message.attach(body_part)
+        return message
+
+    async def _send(self, message: MIMEMultipart):
+        await aiosmtplib.send(
+            message,
+            hostname=EMAIL_SMTP_SERVER,
+            port=EMAIL_SMTP_PORT,
+            username=EMAIL_USER,
+            password=EMAIL_PASSWORD,
+            use_tls=True,
+        )
+
+    async def send_tracking(self):
+        message = self._message()
+        await self._send(message)
+        logging.info(
+            f"Tracking email for {self.invoice_data.get('invoiceNumber')} "
+            f"sent to {message['To']}"
+        )
+
+    async def send_invoice(self):
+        message = self._message()
+        recipient = message["To"]
 
         filename = f"{self.invoice_data.get('invoiceNumber')}.pdf"
         part = MIMEApplication(
@@ -78,14 +103,7 @@ class Mail:
         message.attach(part)
 
         # send e-mail
-        await aiosmtplib.send(
-            message,
-            hostname=EMAIL_SMTP_SERVER,
-            port=EMAIL_SMTP_PORT,
-            username=EMAIL_USER,
-            password=EMAIL_PASSWORD,
-            use_tls=True,
-        )
+        await self._send(message)
         logging.info(
             f"Invoice {self.invoice_data.get('invoice_id', '')} sent to {recipient}"
         )
