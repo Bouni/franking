@@ -52,6 +52,13 @@ def regions(country_code: str) -> list:
     )
 
 
+def valid_country(country_code: str) -> bool:
+    return (
+        len(country_code) == 2
+        and pycountry.countries.get(alpha_2=country_code.upper()) is not None
+    )
+
+
 def rate_limited(client_ip: str) -> bool:
     now = time.monotonic()
     timestamps = _orders_per_ip[client_ip]

@@ -375,29 +375,21 @@ async def cancel_shipping(data: dict):
 
 @app.get("/api/order/products")
 async def get_products():
+    # Public (order.bouni.de): only active products and only the fields the
+    # order form needs
     async with await Invio.create() as invio:
         products = await invio.get_products()
-        products = [
-            {
-                k: v
-                for k, v in p.items()
-                if k
-                not in [
-                    "description",
-                    "sku",
-                    "unit",
-                    "isActive",
-                    "createdAt",
-                    "updatedAt",
-                ]
-            }
-            for p in products
-        ]
-        return products
+    return [
+        {k: p.get(k) for k in ("id", "name", "unitPrice", "category")}
+        for p in products
+        if p.get("isActive", True)
+    ]
 
 
 @app.get("/api/order/shipping")
 async def order_shipping(country: str):
+    if not order.valid_country(country):
+        return JSONResponse({"success": False, "msg": "Invalid country"})
     try:
         quote = await order.shipping_quote(country)
     except (SendcloudError, ValueError) as e:
@@ -420,8 +412,10 @@ async def submit_order(data: dict, request: Request):
         logging.info("Order dropped by honeypot")
         return JSONResponse({"success": True})
 
+    # Caddy appends the real client IP as the last X-Forwarded-For entry,
+    # everything before it is client controlled
     client_ip = (
-        request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        request.headers.get("x-forwarded-for", "").split(",")[-1].strip()
         or request.client.host
     )
     if order.rate_limited(client_ip):
@@ -542,14 +536,17 @@ async def paypal_ipn_listener(request: Request):
     return {"status": "ok"}
 
 
+STATIC_DIR = Path("static").resolve()
+
 app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 
 
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
-    # Check if the requested path exists as a static file
-    file_path = os.path.join("static", full_path)
-    if os.path.isfile(file_path):
+    # Serve the file only if it really is inside the static folder, so paths
+    # like "../../invio.db" can't read anything else
+    file_path = (STATIC_DIR / full_path).resolve()
+    if file_path.is_relative_to(STATIC_DIR) and file_path.is_file():
         return FileResponse(file_path)
     # Otherwise, return index.html to let Vue Router handle it
     return FileResponse("static/index.html")
