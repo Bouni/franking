@@ -425,7 +425,9 @@ async def submit_order(data: dict, request: Request):
         )
         customer_data = {
             "name": f"{values['firstname']} {values['lastname']}",
+            "contactName": values["contact"],
             "email": values["email"],
+            "phone": values["phone"],
             "address": values["address"],
             "postalCode": values["postalcode"],
             "city": values["city"],

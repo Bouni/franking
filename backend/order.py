@@ -19,6 +19,7 @@ _quotes: dict[str, tuple[float, dict]] = {}
 
 MAX_QUANTITY = 99
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+PHONE_RE = re.compile(r"^\+?[0-9 ()/-]{4,30}$")
 
 
 class OrderError(Exception):
@@ -76,6 +77,14 @@ def validate(data: dict, products: list) -> tuple[dict, list]:
         raise OrderError("Country is invalid")
     values["country"] = values["country"].upper()
 
+    # Optional fields
+    values["contact"] = str(data.get("contact") or "").strip()
+    if len(values["contact"]) > 200:
+        raise OrderError("Contact person is too long")
+    values["phone"] = str(data.get("phone") or "").strip()
+    if values["phone"] and not PHONE_RE.match(values["phone"]):
+        raise OrderError("Phone number is invalid")
+
     goods = {p["id"]: p for p in products if p.get("category") == "goods"}
     items = []
     for item in data.get("items") or []:
@@ -128,7 +137,16 @@ def find_customer(customers: list, customer: dict) -> dict | None:
     for c in customers:
         if all(
             norm(c.get(k)) == norm(customer.get(k))
-            for k in ("name", "email", "address", "postalCode", "city", "countryCode")
+            for k in (
+                "name",
+                "contactName",
+                "email",
+                "phone",
+                "address",
+                "postalCode",
+                "city",
+                "countryCode",
+            )
         ):
             return c
     return None

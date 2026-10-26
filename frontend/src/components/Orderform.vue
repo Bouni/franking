@@ -160,7 +160,10 @@
 
               <v-card-title>Shipping address</v-card-title>
 
-              <v-card-subtitle>All fields are required</v-card-subtitle>
+              <v-card-subtitle>
+                Contact person and phone are optional, everything else is
+                required
+              </v-card-subtitle>
             </v-card-item>
 
             <v-card-text>
@@ -188,12 +191,37 @@
 
                 <v-col cols="12">
                   <v-text-field
+                    v-model="order.contact"
+                    autocomplete="off"
+                    hint="Optional, e.g. a company contact or your forum nickname"
+                    label="Contact person (optional)"
+                    prepend-inner-icon="mdi-card-account-details"
+                    :rules="[rules.maxLength]"
+                    variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="7">
+                  <v-text-field
                     v-model="order.email"
                     autocomplete="email"
                     label="Email address"
                     prepend-inner-icon="mdi-email"
                     :rules="[rules.required, rules.email]"
                     type="email"
+                    variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="5">
+                  <v-text-field
+                    v-model="order.phone"
+                    autocomplete="tel"
+                    hint="Optional, helps the carrier to reach you"
+                    label="Phone (optional)"
+                    prepend-inner-icon="mdi-phone"
+                    :rules="[rules.phone]"
+                    type="tel"
                     variant="outlined"
                   />
                 </v-col>
@@ -458,7 +486,9 @@ const faqs = [
 const order = ref({
   firstname: "",
   lastname: "",
+  contact: "",
   email: "",
+  phone: "",
   address: "",
   city: "",
   postalcode: "",
@@ -536,6 +566,11 @@ const rules = {
     /.[^\n\r@\u2028\u2029]*@.+\..+/.test(val) ||
     "Must be a valid email address.",
   minQuantity: (val: number) => val >= 1 || "Quantity must be at least 1.",
+  maxLength: (val: string) => !val || val.length <= 200 || "Too long.",
+  phone: (val: string) =>
+    !val ||
+    /^\+?[0-9 ()/-]{4,30}$/.test(val.trim()) ||
+    "Must be a valid phone number.",
 };
 
 type FormInstance = {
