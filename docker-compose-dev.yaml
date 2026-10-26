@@ -1,0 +1,75 @@
+# Development setup with hot reload for backend and frontend
+#
+#   docker compose -f docker-compose-dev.yaml up
+#
+# Frontend (Vite): http://localhost:3001
+# Backend (FastAPI): http://localhost:8000/docs
+#
+# DEBUG defaults to true (dry run): no Internetmarke or Sendcloud label is
+# bought, a "DEBUG - NOT A LABEL" placeholder is created instead.
+# Labels are written to ./labels.
+
+services:
+  backend:
+    container_name: franking-dev-backend
+    image: ghcr.io/astral-sh/uv:alpine3.22
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      # Dry run by default, set DEV_DEBUG=false in .env to buy real labels in dev
+      DEBUG: ${DEV_DEBUG:-true}
+      LABEL_PATH: /labels
+      # Keep the venv and uv caches out of the bind mount
+      UV_PROJECT_ENVIRONMENT: /opt/venv
+      UV_CACHE_DIR: /opt/uv-cache
+      UV_PYTHON_INSTALL_DIR: /opt/uv-python
+    command: >
+      sh -c "apk add --no-cache git &&
+             uv sync --locked &&
+             mkdir -p static/assets &&
+             uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+    # The host uses a local DNS resolver (127.0.0.1) that containers can't reach,
+    # so internal names have to be pinned here
+    extra_hosts:
+      - invio.bouni.de:192.168.88.22
+    ports:
+      - 8000:8000
+    volumes:
+      - ./backend:/app
+      # Anonymous volume, so the (missing) static frontend build doesn't end up in ./backend
+      - /app/static
+      - ./labels:/labels
+      # Invio database, read only (InvioDB reads /app/invio.db)
+      - /opt/docker/invio/data/invio.db:/app/invio.db:ro
+      - uv-venv:/opt/venv
+      - uv-cache:/opt/uv-cache
+      - uv-python:/opt/uv-python
+
+  frontend:
+    container_name: franking-dev-frontend
+    image: node:22-slim
+    working_dir: /frontend
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    command: >
+      sh -c "corepack enable &&
+             corepack prepare pnpm@10.2.0 --activate &&
+             pnpm install &&
+             pnpm dev --host 0.0.0.0"
+    ports:
+      - 3001:3001
+    volumes:
+      - ./frontend:/frontend
+      # Keep the container's node_modules separate from the host's
+      - /frontend/node_modules
+      - pnpm-store:/root/.local/share/pnpm
+    depends_on:
+      - backend
+
+volumes:
+  uv-venv:
+  uv-cache:
+  uv-python:
+  pnpm-store:
