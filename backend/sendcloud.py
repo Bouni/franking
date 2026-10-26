@@ -60,6 +60,8 @@ def needs_customs(country_code: str) -> bool:
 class SendcloudError(Exception):
     def __init__(self, msg: str, status_code: int | None = None):
         super().__init__(msg)
+        # Text that may be shown to the user (Sendcloud's error detail)
+        self.user_message = msg
         self.status_code = status_code
 
 

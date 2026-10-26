@@ -33,7 +33,11 @@ PHONE_RE = re.compile(r"^\+?[0-9 ()/-]{4,30}$")
 
 
 class OrderError(Exception):
-    pass
+    """Validation error, its message is meant to be shown to the user"""
+
+    def __init__(self, msg: str):
+        super().__init__(msg)
+        self.user_message = msg
 
 
 def regions(country_code: str) -> list:
@@ -49,6 +53,13 @@ def regions(country_code: str) -> list:
             if not s.parent_code and s.type != "Outlying area"
         ),
         key=lambda r: r["name"],
+    )
+
+
+def valid_country(country_code: str) -> bool:
+    return (
+        len(country_code) == 2
+        and pycountry.countries.get(alpha_2=country_code.upper()) is not None
     )
 
 
