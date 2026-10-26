@@ -116,6 +116,10 @@
             />
           </template>
 
+          <template #item.customer.email="{ value }">
+            <a v-if="value" :href="`mailto:${value}`">{{ value }}</a>
+          </template>
+
           <template #item.customer.countryCode="{ value }">
             <span class="ms-2">{{ value }}</span>
 
@@ -313,6 +317,7 @@ const headers = [
   { title: "Sum", key: "subtotal", align: "start" },
   { title: "Customer", key: "customer.name", align: "start" },
   { title: "Contact", key: "customer.contactName", align: "start" },
+  { title: "Email", key: "customer.email", align: "start" },
   { title: "Address", key: "customer.address", align: "start" },
   { title: "City", key: "customer.city", align: "start" },
   { title: "Postal code", key: "customer.postalCode", align: "start" },
