@@ -201,7 +201,7 @@
     >
       <template #loader>
         <v-row dense>
-          <v-col v-for="n in 4" :key="n" cols="12" md="6">
+          <v-col v-for="n in 4" :key="n" cols="12">
             <v-skeleton-loader type="article, actions" />
           </v-col>
         </v-row>
@@ -215,7 +215,7 @@
 
       <template #default="{ items }">
         <v-row dense>
-          <v-col v-for="{ raw } in items" :key="raw.id" cols="12" md="6">
+          <v-col v-for="{ raw } in items" :key="raw.id" cols="12">
             <InvoiceCard :invoice="raw" @send="requestSendInvoice" />
           </v-col>
         </v-row>
