@@ -154,48 +154,31 @@
         </template>
 
         <template #item.items="{ item }">
-          <div class="d-flex align-center justify-center ga-1">
-            <v-menu
-              :close-on-content-click="false"
-              location="end"
-              open-on-click
-              open-on-hover
+          <div class="cell-items py-2">
+            <div
+              v-for="i in item.items"
+              :key="i.id"
+              class="item-line"
+              :class="{ 'text-medium-emphasis': !i.productId }"
             >
-              <template #activator="{ props: menuProps }">
-                <v-btn
-                  v-bind="menuProps"
-                  prepend-icon="mdi-format-list-bulleted"
-                  size="small"
-                  variant="tonal"
-                >
-                  {{ item.items.length }}
-                </v-btn>
-              </template>
+              <span class="text-no-wrap">{{ i.quantity }} ×</span>
+              <span class="item-description">{{ i.description }}</span>
 
-              <v-card border elevation="8" min-width="420">
-                <v-card-item>
-                  <v-card-title>{{ item.invoiceNumber }}</v-card-title>
-                  <v-card-subtitle>{{ item.customer?.name }}</v-card-subtitle>
-                </v-card-item>
+              <span class="amount text-no-wrap">
+                {{ formatPrice(i.lineTotal) }}
+              </span>
+            </div>
 
-                <v-divider />
-                <InvoiceItems :invoice="item" />
-              </v-card>
-            </v-menu>
-
-            <v-tooltip
+            <v-chip
               v-if="!hasShipping(item)"
-              location="top"
-              text="No shipping costs on this invoice"
+              class="mt-1"
+              color="warning"
+              prepend-icon="mdi-alert"
+              size="x-small"
+              variant="tonal"
             >
-              <template #activator="{ props: tooltipProps }">
-                <v-icon
-                  v-bind="tooltipProps"
-                  color="warning"
-                  icon="mdi-alert"
-                />
-              </template>
-            </v-tooltip>
+              No shipping
+            </v-chip>
           </div>
         </template>
 
@@ -310,7 +293,6 @@ import sparkasseIcon from "@/assets/Sparkasse.svg";
 import Internetmarke from "@/components/Internetmarke.vue";
 import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceCard from "@/components/InvoiceCard.vue";
-import InvoiceItems from "@/components/InvoiceItems.vue";
 import {
   formatDate,
   formatPrice,
@@ -404,7 +386,7 @@ const headers = [
   { title: "Address", key: "customer.city", align: "start" },
   { title: "Status", key: "status", align: "center" },
   { title: "Sum", key: "subtotal", align: "end" },
-  { title: "Items", key: "items", align: "center", sortable: false },
+  { title: "Items", key: "items", align: "start", sortable: false },
   { title: "Actions", key: "actions", align: "center", sortable: false },
 ] as const;
 
@@ -450,6 +432,23 @@ onMounted(() => {
 /* On a colored chip a darkened pill works for light and dark status colors */
 .status-filter .selected .count {
   background: rgba(0, 0, 0, 0.18);
+}
+
+.cell-items {
+  min-width: 260px;
+  max-width: 380px;
+  font-size: 0.875rem;
+}
+
+.item-line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.item-description {
+  overflow-wrap: anywhere;
 }
 
 .cell-customer {

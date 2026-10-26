@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useDisplay } from "vuetify";
 import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
 import InvoiceActions from "@/components/InvoiceActions.vue";
@@ -18,7 +19,10 @@ defineProps<{
 
 const emit = defineEmits(["send"]);
 
-const showItems = ref(false);
+// Phones show the items on demand, wider screens always
+const { smAndDown } = useDisplay();
+const expanded = ref(false);
+const showItems = computed(() => !smAndDown.value || expanded.value);
 </script>
 
 <template>
@@ -119,19 +123,24 @@ const showItems = ref(false);
       </div>
 
       <v-btn
-        :append-icon="showItems ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+        v-if="smAndDown"
+        :append-icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
         class="mt-2 px-1"
         prepend-icon="mdi-format-list-bulleted"
         size="small"
         variant="text"
-        @click="showItems = !showItems"
+        @click="expanded = !expanded"
       >
         {{ invoice.items.length }}
         {{ invoice.items.length === 1 ? "item" : "items" }}
       </v-btn>
 
       <v-expand-transition>
-        <div v-show="showItems" class="items-wrapper">
+        <div
+          v-show="showItems"
+          class="items-wrapper"
+          :class="{ 'mt-2': !smAndDown }"
+        >
           <InvoiceItems :invoice="invoice" />
         </div>
       </v-expand-transition>
