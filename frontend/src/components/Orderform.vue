@@ -160,7 +160,10 @@
 
               <v-card-title>Shipping address</v-card-title>
 
-              <v-card-subtitle>All fields are required</v-card-subtitle>
+              <v-card-subtitle>
+                Contact person and phone are optional, everything else is
+                required
+              </v-card-subtitle>
             </v-card-item>
 
             <v-card-text>
@@ -188,12 +191,37 @@
 
                 <v-col cols="12">
                   <v-text-field
+                    v-model="order.contact"
+                    autocomplete="off"
+                    hint="Optional, e.g. a company contact or your forum nickname"
+                    label="Contact person (optional)"
+                    prepend-inner-icon="mdi-card-account-details"
+                    :rules="[rules.maxLength]"
+                    variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="7">
+                  <v-text-field
                     v-model="order.email"
                     autocomplete="email"
                     label="Email address"
                     prepend-inner-icon="mdi-email"
                     :rules="[rules.required, rules.email]"
                     type="email"
+                    variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12" md="5">
+                  <v-text-field
+                    v-model="order.phone"
+                    autocomplete="tel"
+                    hint="Optional, helps the carrier to reach you"
+                    label="Phone (optional)"
+                    prepend-inner-icon="mdi-phone"
+                    :rules="[rules.phone]"
+                    type="tel"
                     variant="outlined"
                   />
                 </v-col>
@@ -262,6 +290,26 @@
                       />
 
                       <span>{{ item.name }}</span>
+                    </template>
+                  </v-autocomplete>
+                </v-col>
+
+                <v-col v-if="regions.length > 0" cols="12">
+                  <v-autocomplete
+                    v-model="order.region"
+                    autocomplete="address-level1"
+                    hint="Required by the carrier for this country"
+                    item-title="name"
+                    item-value="code"
+                    :items="regions"
+                    label="State / Province"
+                    persistent-hint
+                    prepend-inner-icon="mdi-map-marker"
+                    :rules="[rules.required]"
+                    variant="outlined"
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props" :subtitle="item.code" />
                     </template>
                   </v-autocomplete>
                 </v-col>
@@ -405,7 +453,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { COUNTRIES } from "@/constants/countries";
-import { type Shipping, useOrderStore } from "@/store/order";
+import { type Region, type Shipping, useOrderStore } from "@/store/order";
 
 const orderStore = useOrderStore();
 
@@ -458,11 +506,14 @@ const faqs = [
 const order = ref({
   firstname: "",
   lastname: "",
+  contact: "",
   email: "",
+  phone: "",
   address: "",
   city: "",
   postalcode: "",
   country: "",
+  region: "",
 });
 const website = ref("");
 
@@ -512,6 +563,17 @@ watch(
 const shipping = ref<Shipping | null>(null);
 const shippingLoading = ref(false);
 
+// State/province list for countries whose carriers need it
+const regions = ref<Region[]>([]);
+
+watch(
+  () => order.value.country,
+  async (country) => {
+    order.value.region = "";
+    regions.value = country ? await orderStore.fetchRegions(country) : [];
+  },
+);
+
 watch(
   () => order.value.country,
   async (country) => {
@@ -536,6 +598,11 @@ const rules = {
     /.[^\n\r@\u2028\u2029]*@.+\..+/.test(val) ||
     "Must be a valid email address.",
   minQuantity: (val: number) => val >= 1 || "Quantity must be at least 1.",
+  maxLength: (val: string) => !val || val.length <= 200 || "Too long.",
+  phone: (val: string) =>
+    !val ||
+    /^\+?[0-9 ()/-]{4,30}$/.test(val.trim()) ||
+    "Must be a valid phone number.",
 };
 
 type FormInstance = {

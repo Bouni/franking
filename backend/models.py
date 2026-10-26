@@ -9,6 +9,7 @@ class Address(BaseModel):
     city: str
     postcode: str
     country: str
+    region: str = ""  # state/province code, e.g. CA, NSW, ON
     phone: str | None = None
     email: str = ""
 

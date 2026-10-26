@@ -9,6 +9,11 @@ export interface Product {
   category?: string;
 }
 
+export interface Region {
+  code: string;
+  name: string;
+}
+
 export interface Shipping {
   name: string;
   price: number;
@@ -40,6 +45,18 @@ export const useOrderStore = defineStore("order", () => {
     }
   }
 
+  // States/provinces, empty for countries that don't need one
+  async function fetchRegions(country: string): Promise<Region[]> {
+    try {
+      const response = await api.get("/order/regions", {
+        params: { country },
+      });
+      return response.data.regions;
+    } catch {
+      return [];
+    }
+  }
+
   // Returns null on success, otherwise an error message
   async function submitOrder(order: object): Promise<string | null> {
     try {
@@ -58,6 +75,7 @@ export const useOrderStore = defineStore("order", () => {
     productsError,
     fetchProducts,
     fetchShipping,
+    fetchRegions,
     submitOrder,
   };
 });

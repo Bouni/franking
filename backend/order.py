@@ -13,16 +13,43 @@ RATE_LIMIT = 5
 RATE_WINDOW_S = 3600
 _orders_per_ip: dict[str, deque] = defaultdict(deque)
 
+# Countries without a Sendcloud/DHL product: fixed shipping price, the label
+# (DHL Paket 2 kg) is bought manually
+MANUAL_SHIPPING = {
+    "US": {"name": "DHL Paket International", "price": 30},
+}
+
 # Shipping prices are fetched from Sendcloud, cache them per country
 QUOTE_CACHE_S = 3600
 _quotes: dict[str, tuple[float, dict]] = {}
 
 MAX_QUANTITY = 99
+
+# Countries where carriers (DHL) need a state/province. Stored in Invio as
+# "region" (ISO 3166-2 code without the country prefix, e.g. CA, NSW, ON)
+REGION_COUNTRIES = {"US", "CA", "AU", "ZA"}
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+PHONE_RE = re.compile(r"^\+?[0-9 ()/-]{4,30}$")
 
 
 class OrderError(Exception):
     pass
+
+
+def regions(country_code: str) -> list:
+    """States/provinces of a country, empty if the country doesn't need one"""
+    country = country_code.upper()
+    if country not in REGION_COUNTRIES:
+        return []
+    subdivisions = pycountry.subdivisions.get(country_code=country) or []
+    return sorted(
+        (
+            {"code": s.code.split("-", 1)[1], "name": s.name}
+            for s in subdivisions
+            if not s.parent_code and s.type != "Outlying area"
+        ),
+        key=lambda r: r["name"],
+    )
 
 
 def rate_limited(client_ip: str) -> bool:
@@ -39,6 +66,8 @@ def rate_limited(client_ip: str) -> bool:
 async def shipping_quote(country_code: str) -> dict:
     """Shipping price for the label weight, rounded up to the next full euro"""
     country = alpha_2(country_code)
+    if manual := MANUAL_SHIPPING.get(country):
+        return {**manual, "price_rounded": manual["price"], "manual": True}
     cached = _quotes.get(country)
     if cached and time.monotonic() - cached[0] < QUOTE_CACHE_S:
         return cached[1]
@@ -76,6 +105,25 @@ def validate(data: dict, products: list) -> tuple[dict, list]:
         raise OrderError("Country is invalid")
     values["country"] = values["country"].upper()
 
+    # State/province, only for countries that need it
+    region_codes = {r["code"] for r in regions(values["country"])}
+    values["region"] = str(data.get("region") or "").strip().upper()
+    if region_codes:
+        if not values["region"]:
+            raise OrderError("State / Province is required")
+        if values["region"] not in region_codes:
+            raise OrderError("State / Province is invalid")
+    else:
+        values["region"] = ""
+
+    # Optional fields
+    values["contact"] = str(data.get("contact") or "").strip()
+    if len(values["contact"]) > 200:
+        raise OrderError("Contact person is too long")
+    values["phone"] = str(data.get("phone") or "").strip()
+    if values["phone"] and not PHONE_RE.match(values["phone"]):
+        raise OrderError("Phone number is invalid")
+
     goods = {p["id"]: p for p in products if p.get("category") == "goods"}
     items = []
     for item in data.get("items") or []:
@@ -100,35 +148,42 @@ def validate(data: dict, products: list) -> tuple[dict, list]:
     return values, items
 
 
-def shipping_item(products: list, country: str, price: float) -> dict:
+def shipping_item(products: list, country: str, quote: dict) -> dict:
     """Invoice line for the shipping costs, using the matching Invio shipping
-    product ("Versand national" / "Versand international") if there is one"""
+    product ("Versand national" / "Versand international") if there is one.
+    The shipping method from the order form is added in brackets, e.g.
+    "Versand national (DHL Kleinpaket)"."""
     international = alpha_2(country) != "DE"
+    item = {
+        "description": "Versand international" if international else "Versand national",
+        "quantity": 1,
+        "unitPrice": quote["price_rounded"],
+    }
     for p in products:
         if p.get("category") != "shipping":
             continue
         if ("international" in p["name"].lower()) == international:
-            return {
-                "productId": p["id"],
-                "description": p["name"],
-                "quantity": 1,
-                "unitPrice": price,
-            }
-    name = "Versand international" if international else "Versand national"
-    return {"description": name, "quantity": 1, "unitPrice": price}
+            item["productId"] = p["id"]
+            item["description"] = p["name"]
+            break
+    if quote.get("name"):
+        item["description"] += f" ({quote['name']})"
+    return item
 
 
 def find_customer(customers: list, customer: dict) -> dict | None:
-    """Reuse an existing customer only if all address data is identical,
-    so old invoices keep showing the address they were issued for"""
+    """Reuse an existing customer if name and address match (ignoring case),
+    so old invoices keep showing the address they were issued for. Email,
+    phone and contact person don't matter for recognising a customer."""
 
     def norm(value) -> str:
         return str(value or "").strip().lower()
 
     for c in customers:
-        if all(
-            norm(c.get(k)) == norm(customer.get(k))
-            for k in ("name", "email", "address", "postalCode", "city", "countryCode")
-        ):
+        keys = ["name", "address", "postalCode", "city", "countryCode"]
+        # Only compare the state/province once Invio knows the field
+        if "region" in c:
+            keys.append("region")
+        if all(norm(c.get(k)) == norm(customer.get(k)) for k in keys):
             return c
     return None

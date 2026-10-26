@@ -23,6 +23,7 @@ from sendcloud import (
     SENDCLOUD_DEFAULT_WEIGHT_G,
     Sendcloud,
     SendcloudError,
+    alpha_2,
     shipping_option,
 )
 from sparkasse import Sparkasse
@@ -216,6 +217,17 @@ async def create_shipping_label(data: dict):
     customer = invoice_data["customer"]
     invoice_number = invoice_data["invoiceNumber"]
 
+    # No Sendcloud product for these countries, the label is bought manually
+    if alpha_2(customer["countryCode"]) in order.MANUAL_SHIPPING:
+        return JSONResponse(
+            {
+                "success": False,
+                "msg": f"Invoice {invoice_number} ships to "
+                f"{customer['countryCode']}: buy a DHL label for a 2kg Paket "
+                "manually.",
+            }
+        )
+
     # Ship only after payment, and never twice
     if invoice_data.get("status") != "paid":
         return JSONResponse(
@@ -264,6 +276,7 @@ async def create_shipping_label(data: dict):
         city=customer["city"],
         postcode=customer["postalCode"],
         country=customer["countryCode"],
+        region=customer.get("region") or "",
         phone=customer.get("phone"),
         email=customer.get("email") or "",
     )
@@ -395,6 +408,11 @@ async def order_shipping(country: str):
     )
 
 
+@app.get("/api/order/regions")
+async def order_regions(country: str):
+    return JSONResponse({"regions": order.regions(country)})
+
+
 @app.post("/api/order/submit")
 async def submit_order(data: dict, request: Request):
     # Bots fill in the hidden "website" field, pretend everything worked
@@ -427,15 +445,17 @@ async def submit_order(data: dict, request: Request):
                 status_code=502,
             )
 
-        items.append(
-            order.shipping_item(products, values["country"], quote["price_rounded"])
-        )
+        items.append(order.shipping_item(products, values["country"], quote))
         customer_data = {
             "name": f"{values['firstname']} {values['lastname']}",
+            "contactName": values["contact"],
             "email": values["email"],
+            "phone": values["phone"],
             "address": values["address"],
             "postalCode": values["postalcode"],
             "city": values["city"],
+            # Ignored by Invio versions without the region field
+            "region": values["region"],
             "countryCode": values["country"],
         }
         total = sum(i["unitPrice"] * i["quantity"] for i in items)
