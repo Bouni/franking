@@ -12,6 +12,8 @@
               </v-tab>
 
               <v-tab prepend-icon="mdi-cart" value="order">Order</v-tab>
+
+              <v-tab prepend-icon="mdi-cog" value="settings">Settings</v-tab>
             </v-tabs>
           </template>
         </v-app-bar>
@@ -24,6 +26,10 @@
           <v-tabs-window-item value="order">
             <OrderForm />
           </v-tabs-window-item>
+
+          <v-tabs-window-item value="settings">
+            <Settings />
+          </v-tabs-window-item>
         </v-tabs-window>
       </v-container>
     </v-main>
@@ -34,6 +40,7 @@
 import { ref } from "vue";
 import Invoices from "@/components/Invoices.vue";
 import OrderForm from "@/components/Orderform.vue";
+import Settings from "@/components/Settings.vue";
 
 const tab = ref("invoices");
 </script>

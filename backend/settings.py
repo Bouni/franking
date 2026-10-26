@@ -1,0 +1,112 @@
+import json
+import os
+import textwrap
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Stored next to the labels, that folder is already a persistent volume
+SETTINGS_PATH = Path(
+    os.getenv(
+        "SETTINGS_PATH",
+        default=os.path.join(
+            os.getenv("LABEL_PATH", default="/opt/docker/invio/labels"),
+            "settings.json",
+        ),
+    )
+)
+
+TRACKING_LINK = "{tracking_link}"
+
+# Placeholders that can be used in the emails, with a description
+INVOICE_PLACEHOLDERS = {
+    "{name}": "Customer name",
+    "{invoice_number}": "Invoice number",
+}
+TRACKING_PLACEHOLDERS = {
+    TRACKING_LINK: "Tracking link of the parcel",
+    "{tracking_number}": "Tracking number",
+    **INVOICE_PLACEHOLDERS,
+}
+
+DEFAULTS = {
+    "invoice_email_subject": "Invoice {invoice_number} (BSH-Board)",
+    "invoice_email_body": textwrap.dedent("""
+        Hi {name},
+
+        Im Anhang findest du die Rechnung für deine Bestellung.
+        Diese beinhaltet Zahlungsinformationen für Banküberweisungen und PayPal.
+
+        Sobald ich die Zahlung erhalten habe versende ich in aller Regel am nächsten Werktag.
+
+        Vielen Dank für die Bestellung!
+
+        -------------------------------------------------------------------------------------
+
+        Attached you find the invoice for your order.
+        It contains payment info for bank transfer as well as for PayPal.
+
+        As soon as I recieved the payment, I'll pack your oder and send it usually by the next work day.
+
+        Thank you very much for your Order!
+
+        -------------------------------------------------------------------------------------
+
+        Bouni
+
+        P.S. Sorry to those of you who are non german speakers, my invoicing software is limited when it comes to localization and you might get the invoice not in yor language but in german or english 😅
+        """).strip(),
+    "tracking_email_enabled": True,
+    "tracking_email_subject": "Your order {invoice_number} has been shipped (BSH-Board)",
+    "tracking_email_body": textwrap.dedent("""
+        Hi {name},
+
+        deine Bestellung ist auf dem Weg zu dir!
+        Du kannst die Sendung hier verfolgen: {tracking_link}
+
+        -------------------------------------------------------------------------------------
+
+        Your order is on its way!
+        You can track the parcel here: {tracking_link}
+
+        -------------------------------------------------------------------------------------
+
+        Bouni
+        """).strip(),
+}
+
+
+class SettingsError(Exception):
+    def __init__(self, msg: str):
+        super().__init__(msg)
+        # Validation text that may be shown to the user
+        self.user_message = msg
+
+
+def load() -> dict:
+    stored = json.loads(SETTINGS_PATH.read_text()) if SETTINGS_PATH.is_file() else {}
+    return {k: stored.get(k, v) for k, v in DEFAULTS.items()}
+
+
+def save(data: dict) -> dict:
+    settings = load()
+    for key, default in DEFAULTS.items():
+        if key not in data:
+            continue
+        if not isinstance(data[key], type(default)):
+            raise SettingsError(f"{key} has the wrong type")
+        settings[key] = data[key]
+    if TRACKING_LINK not in settings["tracking_email_body"]:
+        raise SettingsError(f"The email text must contain {TRACKING_LINK}")
+    SETTINGS_PATH.write_text(json.dumps(settings, indent=2))
+    return settings
+
+
+def render(template: str, values: dict) -> str:
+    """Plain replacement instead of str.format, so stray braces in the text
+    don't break anything"""
+    for key, value in values.items():
+        template = template.replace(f"{{{key}}}", str(value or ""))
+    return template
