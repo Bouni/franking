@@ -204,102 +204,120 @@
           </template>
 
           <template #item.actions="{ item }">
-            <ActionButton
-              action="sendInvoice"
-              :action-id="item.id"
-              color="lime-accent-3"
-              :disabled="item.customer.email === ''"
-              icon="mdi-email-fast"
-              tooltip="Send invoice as e-mail"
-              @click="sendInvoice(item.id)"
-            />
+            <div class="actions">
+              <!-- Invoice -->
+              <div class="action-group">
+                <ActionButton
+                  action="sendInvoice"
+                  :action-id="item.id"
+                  color="lime-accent-3"
+                  :disabled="item.customer.email === ''"
+                  icon="mdi-email-fast"
+                  tooltip="Send invoice as e-mail"
+                  @click="sendInvoice(item.id)"
+                />
 
-            <SpeedDialButton
-              :action-id="item.id"
-              :actions="[
-                {
-                  icon: paypalIcon,
-                  color: 'grey-darken-3',
-                  action: 'markInvoicePaid',
-                  onClick: () => markInvoicePaid(item.id, 'PayPal'),
-                },
-                {
-                  icon: sparkasseIcon,
-                  color: 'grey-darken-3',
-                  action: 'markInvoicePaid',
-                  onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
-                },
-              ]"
-              :disabled="item.status !== 'sent'"
-            />
-            <!-- <ActionButton -->
-            <!--   icon="mdi-currency-eur" -->
-            <!--   color="green" -->
-            <!--   tooltip="Mark as paid" -->
-            <!--   action="markInvoicePaid" -->
-            <!--   :action-id="item.id" -->
-            <!--   :disabled="item.status !== 'sent'" -->
-            <!--   @click="markInvoicePaid(item.id)" -->
-            <!-- /> -->
+                <ActionButton
+                  action="printInvoice"
+                  :action-id="item.id"
+                  color="red"
+                  :disabled="item.status !== 'paid'"
+                  icon="mdi-printer-outline"
+                  tooltip="Print invoice"
+                  @click="printInvoice(item.id)"
+                />
+              </div>
 
-            <ShippingButton
-              :country-code="item.customer.countryCode"
-              :disabled="!!item.label"
-              :invoice-id="item.id"
-            />
+              <v-divider vertical />
 
-            <ActionButton
-              action="printLabel"
-              :action-id="item.invoiceNumber"
-              color="purple"
-              :disabled="!item.label"
-              icon="mdi-printer"
-              :tooltip="
-                item.label
-                  ? `Print shipping label (${printerNames[item.label.printer] ?? item.label.printer})`
-                  : 'Print shipping label'
-              "
-              @click="printLabel(item.invoiceNumber)"
-            />
+              <!-- Payment -->
+              <div class="action-group">
+                <SpeedDialButton
+                  :action-id="item.id"
+                  :actions="[
+                    {
+                      icon: paypalIcon,
+                      color: 'grey-darken-3',
+                      action: 'markInvoicePaid',
+                      onClick: () => markInvoicePaid(item.id, 'PayPal'),
+                    },
+                    {
+                      icon: sparkasseIcon,
+                      color: 'grey-darken-3',
+                      action: 'markInvoicePaid',
+                      onClick: () => markInvoicePaid(item.id, 'Bank transfer'),
+                    },
+                  ]"
+                  :disabled="item.status !== 'sent'"
+                />
+              </div>
 
-            <ActionButton
-              action="cancelLabel"
-              :action-id="item.invoiceNumber"
-              color="red-darken-2"
-              :disabled="!item.label || item.label.carrier === 'internetmarke'"
-              icon="mdi-cancel"
-              tooltip="Cancel shipping label"
-              @click="confirmCancelLabel(item.invoiceNumber)"
-            />
+              <v-divider vertical />
 
-            <v-btn
-              v-if="item.label?.tracking_url"
-              :href="item.label.tracking_url"
-              icon="mdi-truck-fast"
-              size="small"
-              target="_blank"
-              variant="text"
-            />
+              <!-- Shipping -->
+              <div class="action-group">
+                <ShippingButton
+                  :country-code="item.customer.countryCode"
+                  :disabled="!!item.label"
+                  :invoice-id="item.id"
+                />
 
-            <ActionButton
-              action="printInvoice"
-              :action-id="item.id"
-              color="red"
-              :disabled="item.status !== 'paid'"
-              icon="mdi-printer-outline"
-              tooltip="Print invoice"
-              @click="printInvoice(item.id)"
-            />
+                <ActionButton
+                  action="printLabel"
+                  :action-id="item.invoiceNumber"
+                  color="purple"
+                  :disabled="!item.label"
+                  icon="mdi-printer"
+                  :tooltip="
+                    item.label
+                      ? `Print shipping label (${printerNames[item.label.printer] ?? item.label.printer})`
+                      : 'Print shipping label'
+                  "
+                  @click="printLabel(item.invoiceNumber)"
+                />
 
-            <ActionButton
-              action="markInvoiceComplete"
-              :action-id="item.id"
-              color="lime-accent-3"
-              :disabled="item.status !== 'paid'"
-              icon="mdi-check"
-              tooltip="Mark as complete"
-              @click="markInvoiceComplete(item.id)"
-            />
+                <ActionButton
+                  action="cancelLabel"
+                  :action-id="item.invoiceNumber"
+                  color="red-darken-2"
+                  :disabled="
+                    !item.label || item.label.carrier === 'internetmarke'
+                  "
+                  icon="mdi-cancel"
+                  tooltip="Cancel shipping label"
+                  @click="confirmCancelLabel(item.invoiceNumber)"
+                />
+
+                <v-tooltip location="top" text="Track shipment">
+                  <template #activator="{ props: tooltipProps }">
+                    <v-btn
+                      v-bind="tooltipProps"
+                      class="ma-1"
+                      color="blue-grey"
+                      :disabled="!item.label?.tracking_url"
+                      :href="item.label?.tracking_url"
+                      icon="mdi-truck-fast"
+                      target="_blank"
+                    />
+                  </template>
+                </v-tooltip>
+              </div>
+
+              <v-divider vertical />
+
+              <!-- Done -->
+              <div class="action-group">
+                <ActionButton
+                  action="markInvoiceComplete"
+                  :action-id="item.id"
+                  color="lime-accent-3"
+                  :disabled="item.status !== 'paid'"
+                  icon="mdi-check"
+                  tooltip="Mark as complete"
+                  @click="markInvoiceComplete(item.id)"
+                />
+              </div>
+            </div>
           </template>
         </v-data-table>
       </v-card>
@@ -415,6 +433,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.actions .v-divider {
+  align-self: stretch;
+  margin-block: 12px;
+}
+
 .items-popover {
   border-color: rgba(var(--v-border-color), 0.25) !important;
 }

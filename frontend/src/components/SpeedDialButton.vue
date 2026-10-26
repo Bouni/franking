@@ -27,6 +27,7 @@ const { isLoading } = storeToRefs(store);
         <template #activator="{ props: tooltipProps }">
           <v-btn
             v-bind="mergeProps(dialProps, tooltipProps)"
+            class="ma-1"
             color="green"
             :disabled="disabled"
             icon="mdi-currency-eur"

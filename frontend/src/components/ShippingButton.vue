@@ -31,7 +31,7 @@ const { createLabel } = store;
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"
-        class="ma-2"
+        class="ma-1"
         color="#ffcc00"
         :disabled="disabled"
         icon

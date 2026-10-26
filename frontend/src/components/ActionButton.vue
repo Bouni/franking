@@ -22,7 +22,7 @@ const { isLoading } = storeToRefs(store);
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"
-        class="ma-2"
+        class="ma-1"
         :color="color"
         :disabled="disabled"
         :icon="icon"
