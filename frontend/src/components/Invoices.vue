@@ -37,20 +37,34 @@
       </v-card-text>
 
       <v-card-text class="pt-0">
-        <v-chip-group v-model="selectedStates" column multiple>
+        <!-- Each chip filters by its status and shows how many invoices have it -->
+        <v-chip-group
+          v-model="selectedStates"
+          class="status-filter"
+          column
+          multiple
+        >
           <v-chip
             v-for="(color, status) in statusColors"
             :key="status"
-            :color="color"
-            filter
+            :class="{ selected: selectedStates.includes(status) }"
+            :color="selectedStates.includes(status) ? color : undefined"
             :value="status"
             :variant="selectedStates.includes(status) ? 'flat' : 'outlined'"
           >
-            <span class="text-capitalize">{{ status }}</span>
+            <template #prepend>
+              <v-icon
+                v-if="selectedStates.includes(status)"
+                class="mr-1"
+                icon="mdi-check"
+                size="small"
+              />
 
-            <span class="ml-2 font-weight-bold">{{
-              statusCounts[status]
-            }}</span>
+              <span v-else class="dot mr-2" :style="{ background: color }" />
+            </template>
+
+            <span class="text-capitalize">{{ status }}</span>
+            <span class="count ml-2">{{ statusCounts[status] }}</span>
           </v-chip>
         </v-chip-group>
       </v-card-text>
@@ -403,6 +417,39 @@ onMounted(() => {
 .search {
   flex: 1 1 260px;
   max-width: 360px;
+}
+
+.status-filter .v-chip {
+  font-weight: 500;
+}
+
+.status-filter .v-chip:not(.selected) {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  border-color: rgba(var(--v-border-color), 0.25);
+}
+
+.status-filter .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-filter .count {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: rgba(var(--v-theme-on-surface), 0.08);
+}
+
+/* On a colored chip a darkened pill works for light and dark status colors */
+.status-filter .selected .count {
+  background: rgba(0, 0, 0, 0.18);
 }
 
 .cell-customer {
