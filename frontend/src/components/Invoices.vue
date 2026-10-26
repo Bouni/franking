@@ -100,6 +100,53 @@
             </v-chip>
           </template>
 
+          <template #item.items="{ item }">
+            <v-menu
+              :close-on-content-click="false"
+              location="end"
+              open-on-hover
+            >
+              <template #activator="{ props: menuProps }">
+                <v-btn
+                  v-bind="menuProps"
+                  prepend-icon="mdi-format-list-bulleted"
+                  size="small"
+                  variant="tonal"
+                >
+                  {{ item.items.length }}
+                </v-btn>
+              </template>
+
+              <v-card :title="`Items ${item.invoiceNumber}`">
+                <v-table density="compact">
+                  <thead>
+                    <tr>
+                      <th class="text-end">Qty</th>
+                      <th>Description</th>
+                      <th class="text-end">Unit price</th>
+                      <th class="text-end">Total</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr v-for="i in item.items" :key="i.id">
+                      <td class="text-end">{{ i.quantity }}</td>
+                      <td>{{ i.description }}</td>
+
+                      <td class="text-end">
+                        {{ formatPrice(i.unitPrice) }}
+                      </td>
+
+                      <td class="text-end">
+                        {{ formatPrice(i.lineTotal) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </v-card>
+            </v-menu>
+          </template>
+
           <template #item.checks="{ item }">
             <v-icon
               :color="
@@ -305,6 +352,11 @@ const filteredInvoices = computed(() => {
   );
 });
 
+// Same format as the Sum column
+function formatPrice(value: number) {
+  return `${(value ?? 0).toFixed(2)} €`;
+}
+
 function getPaymentMethod(item: any) {
   return item.statusHistory.find((entry: any) => entry.paymentMethod)
     ?.paymentMethod;
@@ -315,6 +367,7 @@ const headers = [
   { title: "Shipping", key: "checks", align: "center", sortable: false },
   { title: "Status", key: "status", align: "center", sortable: false },
   { title: "Sum", key: "subtotal", align: "start" },
+  { title: "Items", key: "items", align: "center", sortable: false },
   { title: "Customer", key: "customer.name", align: "start" },
   { title: "Contact", key: "customer.contactName", align: "start" },
   { title: "Email", key: "customer.email", align: "start" },
