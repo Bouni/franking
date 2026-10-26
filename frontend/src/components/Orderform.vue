@@ -364,7 +364,7 @@ const faqs = [
   {
     question: "Can you sell me ready to use RAST connection cables?",
     answer:
-      "Unfortunately, no. Not at this point, maybe I can in the future but there are no plans for this now. For me 3x0.34mm² cable worked out pretty well. Alternatively you can use single wires of this size.",
+      "Unfortunately, no. Not at this point, maybe I can in the future but there are no plans for this now. For me 3x0.34mm² (22 AWG) cable worked out pretty well. Alternatively you can use single wires of this size.",
   },
   {
     question: "Do I get a tracking number?",
