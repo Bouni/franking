@@ -56,15 +56,15 @@ services:
     command: >
       sh -c "corepack enable &&
              corepack prepare pnpm@10.2.0 --activate &&
-             pnpm install &&
+             pnpm install --config.confirm-modules-purge=false --config.store-dir=/frontend/node_modules/.pnpm-store &&
              pnpm dev --host 0.0.0.0"
     ports:
       - 3001:3001
     volumes:
       - ./frontend:/frontend
-      # Keep the container's node_modules separate from the host's
+      # Keep the container's node_modules (and pnpm's store, which has to be on
+      # the same filesystem) separate from the host's
       - /frontend/node_modules
-      - pnpm-store:/root/.local/share/pnpm
     depends_on:
       - backend
 
@@ -72,4 +72,3 @@ volumes:
   uv-venv:
   uv-cache:
   uv-python:
-  pnpm-store:
