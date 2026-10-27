@@ -95,7 +95,7 @@ function confirmCancelLabel(invoice_number: string) {
       <ActionButton
         action="printLabel"
         :action-id="invoice.invoiceNumber"
-        color="blue-grey-darken-2"
+        color="blue-grey-darken-1"
         :disabled="!invoice.label"
         icon="mdi-printer"
         :tooltip="
@@ -103,14 +103,13 @@ function confirmCancelLabel(invoice_number: string) {
             ? `Print shipping label (${printerNames[invoice.label.printer] ?? invoice.label.printer})`
             : 'Print shipping label'
         "
-        variant="tonal"
         @click="printLabel(invoice.invoiceNumber)"
       />
 
       <ActionButton
         action="cancelLabel"
         :action-id="invoice.invoiceNumber"
-        color="#ff595e"
+        color="error"
         :disabled="!invoice.label || invoice.label.carrier === 'internetmarke'"
         icon="mdi-cancel"
         tooltip="Cancel shipping label"
@@ -123,7 +122,7 @@ function confirmCancelLabel(invoice_number: string) {
           <v-btn
             v-bind="tooltipProps"
             class="ma-1"
-            color="blue-grey-darken-2"
+            :color="invoice.label?.tracking_url ? 'blue-grey' : undefined"
             :disabled="!invoice.label?.tracking_url"
             :href="invoice.label?.tracking_url"
             icon="mdi-truck-fast"
