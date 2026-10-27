@@ -33,7 +33,12 @@ export function paymentMethod(invoice: any): string | undefined {
     ?.paymentMethod;
 }
 
-// Shipping costs are an invoice item with "Versand" in the description
+// Shipping costs are an invoice item with "Versand" or "Shipping" in the
+// description, so only flag invoices that have no such item at all
+const shippingPattern = /versand|shipping/i;
+
 export function hasShipping(invoice: any) {
-  return invoice.items.some((i: any) => i.description.includes("Versand"));
+  return (invoice.items ?? []).some((i: any) =>
+    shippingPattern.test(i.description ?? ""),
+  );
 }
