@@ -20,6 +20,7 @@ from invio import Invio, InvioDB
 from mail import Mail
 from models import Address
 from ntfy import send_notification
+import payments
 from payments import payment_check_loop, run_payment_check
 from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
 from sendcloud import (
@@ -85,6 +86,11 @@ def label_info(invoice_number) -> dict | None:
 @app.get("/api/payments/check")
 async def check_payments():
     return await run_payment_check(interactive=True)
+
+
+@app.get("/api/payments/status")
+async def payments_status():
+    return payments.status()
 
 
 @app.get("/api/invoices/{invoice_id}")
@@ -590,6 +596,7 @@ async def paypal_ipn_listener(request: Request):
                     if inv_num in note:
                         logging.info(f"Match found: {inv_num} via PayPal (IPN)")
                         await invio.set_status_paid(i.get("id"), "PayPal")
+                        payments.mark_changed()
                         await send_notification(
                             title="PayPal Payment received",
                             message=f"{amount} {currency} from {full_name}. Note: {note}",

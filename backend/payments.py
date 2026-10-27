@@ -5,6 +5,7 @@ PAYMENT_CHECK_INTERVAL seconds in the background."""
 import asyncio
 import logging
 import os
+from datetime import datetime, timezone
 
 import anyio
 from dotenv import load_dotenv
@@ -32,6 +33,24 @@ _lock = asyncio.Lock()
 # approval can be given) worked, otherwise every run would push a new
 # approval request to the phone.
 _sparkasse_paused = False
+
+# Goes up whenever invoices get marked as paid, open pages poll it and reload
+# the invoice list when it changed
+_changes = 0
+_last_check: str | None = None
+
+
+def mark_changed():
+    global _changes
+    _changes += 1
+
+
+def status() -> dict:
+    return {
+        "changes": _changes,
+        "last_check": _last_check,
+        "sparkasse_paused": _sparkasse_paused,
+    }
 
 
 async def _notify(title: str, message: str, tags: list[str], priority: int):
@@ -136,6 +155,11 @@ async def run_payment_check(interactive: bool) -> dict:
                     ["moneybag"],
                     4,
                 )
+
+    global _last_check
+    _last_check = datetime.now(timezone.utc).isoformat()
+    if paid_invoices:
+        mark_changed()
 
     return {
         "status": "success",
