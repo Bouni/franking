@@ -2,11 +2,13 @@
   <div class="order-page">
     <!-- Hero with the info as "how it works" steps -->
     <v-sheet class="hero pa-6 pa-md-10 mb-6" rounded="lg">
-      <div class="text-overline hero-overline">BSH Board</div>
+      <div class="d-flex align-center mb-2">
+        <img alt="" class="hero-logo mr-4" :src="Avatar" />
 
-      <h1 class="text-h4 text-md-h3 font-weight-bold mb-2">
-        Order your BSH Board
-      </h1>
+        <h1 class="text-h4 text-md-h3 font-weight-bold">
+          Order your BSH Board
+        </h1>
+      </div>
 
       <p class="text-body-1 hero-text mb-6">
         This is a side project, not a webshop. This little form helps me process
@@ -452,6 +454,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import Avatar from "@/assets/avatar.svg";
 import { COUNTRIES } from "@/constants/countries";
 import { type Region, type Shipping, useOrderStore } from "@/store/order";
 
@@ -652,9 +655,17 @@ onMounted(() => {
   color: #fff;
 }
 
-.hero-overline {
-  opacity: 0.85;
-  letter-spacing: 0.2em;
+.hero-logo {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+}
+
+@media (min-width: 960px) {
+  .hero-logo {
+    width: 80px;
+    height: 80px;
+  }
 }
 
 .hero-text {
