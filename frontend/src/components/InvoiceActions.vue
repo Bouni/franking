@@ -109,11 +109,10 @@ function confirmCancelLabel(invoice_number: string) {
       <ActionButton
         action="cancelLabel"
         :action-id="invoice.invoiceNumber"
-        color="error"
+        color="#e63946"
         :disabled="!invoice.label || invoice.label.carrier === 'internetmarke'"
         icon="mdi-cancel"
         tooltip="Cancel shipping label"
-        variant="tonal"
         @click="confirmCancelLabel(invoice.invoiceNumber)"
       />
 
