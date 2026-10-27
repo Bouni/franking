@@ -52,7 +52,6 @@ function confirmCancelLabel(invoice_number: string) {
         :disabled="invoice.status !== 'paid'"
         icon="mdi-printer-outline"
         tooltip="Print invoice"
-        variant="tonal"
         @click="printInvoice(invoice.id)"
       />
     </div>
