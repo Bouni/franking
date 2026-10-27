@@ -23,6 +23,13 @@ SPK_FINTS_PATH = os.getenv("SPK_FINTS_PATH", "fints_state.bin")
 
 logging.basicConfig(level=logging.INFO)
 
+# How long a manual check waits for the approval in the S-pushTAN app
+TAN_TIMEOUT_S = 300
+
+
+class TanRequired(Exception):
+    """The bank wants a TAN (S-pushTAN approval) before it hands out data"""
+
 
 class Sparkasse:
     def __init__(self):
@@ -60,16 +67,22 @@ class Sparkasse:
             return r.group(0)
         return ""
 
-    def fetch_transactions(self, days: int = 30):
+    def fetch_transactions(self, days: int = 30, wait_for_tan: bool = True):
+        """wait_for_tan=False raises TanRequired instead of waiting for the
+        approval, for checks that run without anyone at the app"""
         with self.client:
             if isinstance(self.client.init_tan_response, NeedTANResponse):
-                if self.client.init_tan_response.decoupled:
-                    print("Waiting for SPK App approval...")
-                    while isinstance(self.client.init_tan_response, NeedTANResponse):
-                        time.sleep(2)
-                        self.client.init_tan_response = self.client.send_tan(
-                            self.client.init_tan_response, None
-                        )
+                if not wait_for_tan or not self.client.init_tan_response.decoupled:
+                    raise TanRequired("Sparkasse needs an S-pushTAN approval")
+                logging.info("Waiting for SPK App approval...")
+                deadline = time.monotonic() + TAN_TIMEOUT_S
+                while isinstance(self.client.init_tan_response, NeedTANResponse):
+                    if time.monotonic() > deadline:
+                        raise TanRequired("S-pushTAN approval timed out")
+                    time.sleep(2)
+                    self.client.init_tan_response = self.client.send_tan(
+                        self.client.init_tan_response, None
+                    )
                 self.save_client_state()
 
             account = SEPAAccount(

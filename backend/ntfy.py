@@ -1,3 +1,4 @@
+import logging
 import os
 
 import httpx
@@ -12,13 +13,17 @@ NTFY_TOKEN = os.getenv("NTFY_TOKEN")
 async def send_notification(
     title: str, message: str, tags: list[str] | None = None, priority: int = 1
 ):
-    headers = {}
+    if not NTFY_URL:
+        logging.info(f"NTFY_URL not set, notification not sent: {title}")
+        return
+
+    headers = {"Priority": str(priority)}
 
     if title:
         headers["Title"] = title
-        headers["Priority"] = str(priority)
     if tags:
         headers["Tags"] = ",".join(tags)
+    if NTFY_TOKEN:
         headers["Authorization"] = f"Bearer {NTFY_TOKEN}"
 
     async with httpx.AsyncClient() as client:

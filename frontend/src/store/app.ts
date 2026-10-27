@@ -43,9 +43,10 @@ export const useAppStore = defineStore("app", () => {
   const isLoading = ref<LoadingState | null>(null);
   const settings = ref<Settings | null>(null);
 
+  // Invio's invoice data has no customer and label, keep the ones we have
   function updateInvoice(invoice_data: any) {
     invoices.value = invoices.value.map((inv) =>
-      inv.id === invoice_data.id ? invoice_data : inv,
+      inv.id === invoice_data.id ? { ...inv, ...invoice_data } : inv,
     );
   }
 
@@ -94,6 +95,63 @@ export const useAppStore = defineStore("app", () => {
     } finally {
       isLoading.value = null;
     }
+  }
+
+  // Reload the list without the loading state, so nothing flickers, and
+  // announce invoices that got paid in the meantime
+  async function refreshInvoices() {
+    try {
+      const response = await api.get("/invoices");
+      const before = new Map(invoices.value.map((inv) => [inv.id, inv.status]));
+      invoices.value = response.data.invoices;
+      for (const inv of invoices.value) {
+        const old = before.get(inv.id);
+        if (old && old !== "paid" && inv.status === "paid") {
+          showToast(`Invoice ${inv.invoiceNumber} paid!`, "#8ac926", 10);
+        }
+      }
+    } catch {
+      // The next poll tries again
+    }
+  }
+
+  // Payments are also checked in the background, poll a change counter and
+  // reload the invoices when it moved. Only while the page is visible.
+  const PAYMENT_POLL_MS = 30_000;
+  let paymentChanges: number | null = null;
+  let paymentPoll: ReturnType<typeof setInterval> | null = null;
+
+  async function pollPayments() {
+    if (document.hidden) {
+      return;
+    }
+    try {
+      const response = await api.get("/payments/status");
+      const changes = response.data.changes;
+      if (paymentChanges !== null && changes !== paymentChanges) {
+        await refreshInvoices();
+      }
+      paymentChanges = changes;
+    } catch {
+      // The next poll tries again
+    }
+  }
+
+  function startPaymentWatch() {
+    if (paymentPoll) {
+      return;
+    }
+    pollPayments();
+    paymentPoll = setInterval(pollPayments, PAYMENT_POLL_MS);
+    document.addEventListener("visibilitychange", pollPayments);
+  }
+
+  function stopPaymentWatch() {
+    if (paymentPoll) {
+      clearInterval(paymentPoll);
+      paymentPoll = null;
+    }
+    document.removeEventListener("visibilitychange", pollPayments);
   }
 
   async function markInvoicePaid(invoice_id: string, method: string) {
@@ -319,6 +377,9 @@ export const useAppStore = defineStore("app", () => {
       } else {
         showToast("No new paid invoices!", "#2196f3", 10);
       }
+      for (const problem of response.data.problems ?? []) {
+        showToast(problem, "#ffca3a", 15);
+      }
     } catch (error: any) {
       showToast(
         `Error updating payments: ${error.message || "Error updating payments"}`,
@@ -367,6 +428,8 @@ export const useAppStore = defineStore("app", () => {
 
   return {
     internetmarke,
+    startPaymentWatch,
+    stopPaymentWatch,
     settings,
     fetchSettings,
     saveSettings,

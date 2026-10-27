@@ -286,7 +286,7 @@
 
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useDisplay } from "vuetify";
 import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
@@ -305,8 +305,14 @@ import { type InvoiceEmail, useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
 const { isLoading, invoices } = storeToRefs(appStore);
-const { fetchInvoices, previewInvoiceEmail, sendInvoice, updatePayments } =
-  appStore;
+const {
+  fetchInvoices,
+  previewInvoiceEmail,
+  sendInvoice,
+  startPaymentWatch,
+  stopPaymentWatch,
+  updatePayments,
+} = appStore;
 
 // The table needs the width of a large screen, smaller ones get cards
 const { lgAndUp, xs } = useDisplay();
@@ -392,7 +398,10 @@ const headers = [
 
 onMounted(() => {
   fetchInvoices();
+  startPaymentWatch();
 });
+
+onUnmounted(stopPaymentWatch);
 </script>
 
 <style scoped>

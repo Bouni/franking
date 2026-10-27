@@ -1,7 +1,9 @@
+import asyncio
 import json
 import logging
 import os
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import anyio
@@ -18,7 +20,8 @@ from invio import Invio, InvioDB
 from mail import Mail
 from models import Address
 from ntfy import send_notification
-from paypal import PayPal
+import payments
+from payments import payment_check_loop, run_payment_check
 from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
 from sendcloud import (
     SENDCLOUD_DEFAULT_WEIGHT_G,
@@ -27,7 +30,6 @@ from sendcloud import (
     alpha_2,
     shipping_option,
 )
-from sparkasse import Sparkasse
 
 load_dotenv()
 
@@ -41,7 +43,15 @@ BASE_PATH = Path(__file__).resolve().parent.parent
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(payment_check_loop())
+    yield
+    task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 LABEL_DIR = os.path.realpath(LABEL_PATH)
@@ -75,52 +85,12 @@ def label_info(invoice_number) -> dict | None:
 
 @app.get("/api/payments/check")
 async def check_payments():
-    pp = PayPal()
-    spk = Sparkasse()
+    return await run_payment_check(interactive=True)
 
-    t1 = await anyio.to_thread.run_sync(pp.fetch_transactions)
-    t2 = await anyio.to_thread.run_sync(spk.fetch_transactions)
 
-    payments_map = {}
-
-    for t in t1:
-        if inv := t.get("invoice"):
-            payments_map[str(inv)] = "PayPal"
-
-    for t in t2:
-        if inv := t.get("invoice"):
-            payments_map[str(inv)] = "Bank Transfer"
-
-    async with await Invio.create() as invio:
-        paid_invoices = []
-        raw_invoices = await invio.get_invoices()
-
-        for i in raw_invoices:
-            if i.get("status") == "sent":
-                inv_num = str(i.get("invoiceNumber"))
-
-                if inv_num in payments_map:
-                    method = payments_map[inv_num]
-                    print(f"Match found: {inv_num} via {method}")
-                    await invio.set_status_paid(i.get("id"), method)
-                    invoice_data = await invio.get_invoice_data(i.get("id"))
-                    paid_invoices.append(
-                        {
-                            "id": i.get("id"),
-                            "invoiceNumber": i.get("invoiceNumber"),
-                            "method": method,
-                            "invoice_data": invoice_data,
-                        }
-                    )
-                else:
-                    print(f"No payment seen for: {inv_num}")
-
-    return {
-        "status": "success",
-        "processed": len(raw_invoices),
-        "paid": len(paid_invoices),
-        "paid_invoices": paid_invoices,
-    }
+@app.get("/api/payments/status")
+async def payments_status():
+    return payments.status()
 
 
 @app.get("/api/invoices/{invoice_id}")
@@ -626,6 +596,7 @@ async def paypal_ipn_listener(request: Request):
                     if inv_num in note:
                         logging.info(f"Match found: {inv_num} via PayPal (IPN)")
                         await invio.set_status_paid(i.get("id"), "PayPal")
+                        payments.mark_changed()
                         await send_notification(
                             title="PayPal Payment received",
                             message=f"{amount} {currency} from {full_name}. Note: {note}",
