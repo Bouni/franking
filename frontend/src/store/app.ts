@@ -43,9 +43,10 @@ export const useAppStore = defineStore("app", () => {
   const isLoading = ref<LoadingState | null>(null);
   const settings = ref<Settings | null>(null);
 
+  // Invio's invoice data has no customer and label, keep the ones we have
   function updateInvoice(invoice_data: any) {
     invoices.value = invoices.value.map((inv) =>
-      inv.id === invoice_data.id ? invoice_data : inv,
+      inv.id === invoice_data.id ? { ...inv, ...invoice_data } : inv,
     );
   }
 
@@ -318,6 +319,9 @@ export const useAppStore = defineStore("app", () => {
         }
       } else {
         showToast("No new paid invoices!", "#2196f3", 10);
+      }
+      for (const problem of response.data.problems ?? []) {
+        showToast(problem, "#ffca3a", 15);
       }
     } catch (error: any) {
       showToast(

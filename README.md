@@ -14,6 +14,7 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
 - print the DHL labels on a Brother QL-1110NWB (DK-11247, 103x164mm); older Internetmarken still print on a [Brother QL-710W](https://store.brother.ch/de-ch/devices/label-printer/ql/ql710w) (38mm endless)
 - print the invoice on paper
 - Integration with PayPal and Sparkasse (via FinTS) to fetch the latest payment data and update the payment status with that data
+  - checked automatically every 10 minutes (`PAYMENT_CHECK_INTERVAL`), with a ntfy notification for every received payment
 
 All data is read via the Invio API.
 
