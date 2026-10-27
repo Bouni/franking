@@ -47,22 +47,17 @@ const { createLabel } = store;
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"
-        class="ma-1"
-        :color="disabled ? undefined : '#ffcc00'"
+        class="ma-1 dhl-button"
+        color="#ffcc00"
         :disabled="disabled"
         icon
         :loading="
           isLoading?.action === 'createLabel' && isLoading?.id === invoiceId
         "
-        :variant="disabled ? 'tonal' : 'flat'"
+        variant="flat"
         @click="purchase"
       >
-        <v-img
-          alt="DHL"
-          :class="{ 'opacity-40': disabled }"
-          :src="dhlIcon"
-          width="34"
-        />
+        <v-img alt="DHL" :src="dhlIcon" width="34" />
       </v-btn>
     </template>
   </v-tooltip>
@@ -93,3 +88,13 @@ const { createLabel } = store;
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+/* Vuetify fades disabled buttons almost completely, keep the DHL button
+   recognizable but clearly inactive: yellow and logo, desaturated */
+.dhl-button.v-btn--disabled {
+  background: #ffcc00 !important;
+  filter: grayscale(0.85);
+  opacity: 0.6;
+}
+</style>

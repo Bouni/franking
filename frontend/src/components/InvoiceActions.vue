@@ -66,13 +66,13 @@ function confirmCancelLabel(invoice_number: string) {
         :actions="[
           {
             icon: paypalIcon,
-            color: 'grey-darken-3',
+            color: 'white',
             action: 'markInvoicePaid',
             onClick: () => markInvoicePaid(invoice.id, 'PayPal'),
           },
           {
             icon: sparkasseIcon,
-            color: 'grey-darken-3',
+            color: 'white',
             action: 'markInvoicePaid',
             onClick: () => markInvoicePaid(invoice.id, 'Bank transfer'),
           },
@@ -95,7 +95,7 @@ function confirmCancelLabel(invoice_number: string) {
       <ActionButton
         action="printLabel"
         :action-id="invoice.invoiceNumber"
-        color="blue-grey-darken-1"
+        color="#ff924c"
         :disabled="!invoice.label"
         icon="mdi-printer"
         :tooltip="
@@ -122,12 +122,12 @@ function confirmCancelLabel(invoice_number: string) {
           <v-btn
             v-bind="tooltipProps"
             class="ma-1"
-            :color="invoice.label?.tracking_url ? 'blue-grey' : undefined"
+            :color="invoice.label?.tracking_url ? '#00918e' : undefined"
             :disabled="!invoice.label?.tracking_url"
             :href="invoice.label?.tracking_url"
             icon="mdi-truck-fast"
             target="_blank"
-            variant="tonal"
+            :variant="invoice.label?.tracking_url ? 'flat' : 'tonal'"
           />
         </template>
       </v-tooltip>
