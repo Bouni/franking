@@ -449,6 +449,69 @@
         />
       </v-expansion-panels>
     </section>
+
+    <!-- Shipping restrictions for the US -->
+    <v-dialog v-model="usNotice" max-width="640" scrollable>
+      <v-card prepend-icon="mdi-truck-alert" title="Shipping to the US">
+        <v-card-text>
+          <p>
+            Unfortunately, shipping to the US has become a big hassle. Since the
+            US changed its customs rules, I can only ship the goods as a gift.
+            This is what DHL says about it:
+          </p>
+
+          <blockquote class="dhl-quote mt-4">
+            <p>
+              Due to a recent US executive order, the customs regulations for
+              imports into the USA are changing. Private senders can continue to
+              send gifts to private individuals with a value of up to 100 USD
+              per shipment, as well as documents, by post to the USA and the US
+              customs territory of Puerto Rico. Please make sure that:
+            </p>
+
+            <ul class="ml-5 my-2">
+              <li>
+                the total value of the goods does not exceed 100 USD / 85 EUR
+              </li>
+
+              <li>
+                the contents of the gift shipment are declared as
+                "Geschenk/Gift" in accordance with US import regulations, or
+                documents are marked as such
+              </li>
+
+              <li>the country of origin is stated for each item</li>
+            </ul>
+
+            <p>
+              Due to the new US customs regulations, gifts with a value of more
+              than 100 USD can no longer be sent as postal goods until further
+              notice.
+            </p>
+
+            <footer class="text-caption mt-2">
+              —
+              <a
+                href="https://www.dhl.de/de/privatkunden/pakete-versenden/weltweit-versenden/land/vereinigte-staaten-von-amerika.html"
+                rel="noopener"
+                target="_blank"
+              >
+                DHL, Versand in die Vereinigten Staaten von Amerika
+              </a>
+              (translated from German)
+            </footer>
+          </blockquote>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+
+          <v-btn color="primary" variant="flat" @click="usNotice = false">
+            Got it
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -588,6 +651,16 @@ watch(
   },
 );
 
+// The US only accepts goods from private senders as gifts, explain that
+const usNotice = ref(false);
+
+watch(
+  () => order.value.country,
+  (country) => {
+    if (country === "US") usNotice.value = true;
+  },
+);
+
 const total = computed(() => subtotal.value + (shipping.value?.price ?? 0));
 
 function formatPrice(value: number) {
@@ -693,6 +766,13 @@ onMounted(() => {
 
 .amount {
   font-variant-numeric: tabular-nums;
+}
+
+.dhl-quote {
+  border-left: 4px solid rgb(var(--v-theme-primary));
+  padding: 8px 16px;
+  background: rgba(var(--v-theme-primary), 0.06);
+  border-radius: 0 4px 4px 0;
 }
 
 @media (min-width: 1280px) {
