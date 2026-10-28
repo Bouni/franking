@@ -17,7 +17,7 @@ RUN pnpm run build
 FROM ghcr.io/astral-sh/uv:alpine3.22
 ENV UV_NO_DEV=1
 
-RUN apk add --no-cache git cups-client
+RUN apk add --no-cache git
 
 WORKDIR /app
 

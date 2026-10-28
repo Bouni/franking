@@ -5,15 +5,12 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate, make_msgid
-from pathlib import Path
 
 import aioimaplib
 import aiosmtplib
 from dotenv import load_dotenv
 
 load_dotenv()
-
-BASE_PATH = Path(__file__).resolve().parent.parent
 
 logging.basicConfig(level=logging.INFO)
 
