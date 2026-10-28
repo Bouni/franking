@@ -28,6 +28,7 @@ from sendcloud import (
     Sendcloud,
     SendcloudError,
     alpha_2,
+    apply_product_data,
     shipping_option,
 )
 
@@ -200,12 +201,14 @@ async def internetmarke_balance():
 
 
 async def load_invoice(invoice_id: str) -> dict:
+    """Invoice with customer, and the current customs data of the products"""
     async with await Invio.create() as invio:
         invoice_data = await invio.get_invoice_data(invoice_id)
         invoice_data["customer"] = await invio.get_customer_data(
             invoice_data.get("customerId")
         )
-    return invoice_data
+        products = await invio.get_products()
+    return apply_product_data(invoice_data, products)
 
 
 @app.post("/api/shipping/label")
