@@ -13,7 +13,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 load_dotenv()
 
 MFC_IP = os.getenv("MFC_IP", default="192.168.88.21")
-QL710_IP = os.getenv("QL710_IP", default="192.168.88.13")
 QL1110_IP = os.getenv("QL1110_IP", default="")
 # Margin around die-cut labels in dots (300 dpi, 36 dots ~ 3mm)
 DIE_CUT_MARGIN = int(os.getenv("DIE_CUT_MARGIN", default="36"))
@@ -38,10 +37,10 @@ class BrotherMFC:
 class BrotherQL:
     def __init__(
         self,
-        model: str = "QL-710W",
-        ip: str = QL710_IP,
-        label_size: str = "38",
-        rotate: str = "90",
+        model: str = "QL-1110NWB",
+        ip: str = QL1110_IP,
+        label_size: str = "103x164",
+        rotate: str = "0",
     ):
         self.model = model
         self.ip = ip
@@ -94,23 +93,18 @@ class BrotherQL:
         return False
 
 
-def print_shipping_label(path: Path, printer: str) -> bool:
-    if printer == "ql1110":
-        # DHL Warenpost on DK-11247 (103x164 die-cut)
-        ql = BrotherQL("QL-1110NWB", QL1110_IP, "103x164", rotate="0")
-    else:
-        # Internetmarke on 38mm endless
-        ql = BrotherQL("QL-710W", QL710_IP, "38", rotate="90")
-    return ql.print_label(path)
+def print_shipping_label(path: Path) -> bool:
+    # DHL labels on DK-11247 (103x164 die-cut)
+    return BrotherQL().print_label(path)
 
 
-def debug_label(path: Path, printer: str, lines: list[str]):
+def debug_label(path: Path, lines: list[str]):
     """Placeholder label for dry runs, so it can't be mistaken for a real one"""
-    size = (1200, 1822) if printer == "ql1110" else (1500, 413)
+    size = (1200, 1822)
     image = Image.new("RGB", size, "white")
     draw = ImageDraw.Draw(image)
     draw.rectangle((0, 0, size[0] - 1, size[1] - 1), outline="black", width=12)
-    font = ImageFont.load_default(size=54 if printer == "ql1110" else 72)
+    font = ImageFont.load_default(size=54)
     draw.multiline_text(
         (40, 30), "\n".join(["DEBUG - NOT A LABEL", *lines]), fill="black", font=font
     )

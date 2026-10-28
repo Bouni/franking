@@ -15,11 +15,6 @@ export function statusColor(status: string) {
   return statusColors[status as InvoiceStatus];
 }
 
-export const printerNames: Record<string, string> = {
-  ql710: "QL-710W",
-  ql1110: "QL-1110NWB",
-};
-
 export function formatPrice(value: number) {
   return `${(value ?? 0).toFixed(2)} €`;
 }

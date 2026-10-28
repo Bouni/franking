@@ -7,7 +7,6 @@ import "toastify-js/src/toastify.css";
 export interface LoadingState {
   id: number | string;
   action:
-    | "fetchBalance"
     | "fetchInvoices"
     | "markInvoicePaid"
     | "markInvoiceComplete"
@@ -38,7 +37,6 @@ export interface InvoiceEmail {
 }
 
 export const useAppStore = defineStore("app", () => {
-  const internetmarke = ref({ balance: 0 });
   const invoices = ref<any[]>([]);
   const isLoading = ref<LoadingState | null>(null);
   const settings = ref<Settings | null>(null);
@@ -61,23 +59,6 @@ export const useAppStore = defineStore("app", () => {
         color: "#000",
       },
     }).showToast();
-  }
-
-  async function fetchBalance() {
-    isLoading.value = { id: "", action: "fetchBalance" };
-
-    try {
-      const response = await api.get("/internetmarke/balance");
-      internetmarke.value = response.data;
-    } catch (error: any) {
-      showToast(
-        `Error fetching Balance: ${error.message || "Error fetching Balance"}`,
-        "#ff595e",
-        10,
-      );
-    } finally {
-      isLoading.value = null;
-    }
   }
 
   async function fetchInvoices() {
@@ -324,8 +305,6 @@ export const useAppStore = defineStore("app", () => {
           trackingEmail.sent ? 3 : 10,
         );
       }
-      const response2 = await api.get("/internetmarke/balance");
-      internetmarke.value = response2.data;
     } catch (error: any) {
       showToast(
         `Error creating shipping label: ${error.message || "Error creating shipping label"}`,
@@ -434,7 +413,6 @@ export const useAppStore = defineStore("app", () => {
   }
 
   return {
-    internetmarke,
     startPaymentWatch,
     stopPaymentWatch,
     settings,
@@ -442,7 +420,6 @@ export const useAppStore = defineStore("app", () => {
     saveSettings,
     invoices,
     isLoading,
-    fetchBalance,
     fetchInvoices,
     markInvoicePaid,
     markInvoiceComplete,

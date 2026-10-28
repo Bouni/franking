@@ -2,8 +2,6 @@
   <div>
     <v-card class="mb-4" variant="flat">
       <v-card-text class="d-flex flex-wrap align-center ga-3">
-        <Internetmarke />
-
         <v-btn
           color="primary"
           :loading="isLoading?.action === 'updatePayments'"
@@ -290,7 +288,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useDisplay } from "vuetify";
 import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
-import Internetmarke from "@/components/Internetmarke.vue";
 import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceCard from "@/components/InvoiceCard.vue";
 import {

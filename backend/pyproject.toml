@@ -1,7 +1,7 @@
 [project]
 name = "franking"
 version = "0.1.0"
-description = "A simple Interface for creating shipping labels using Deutsche Post Internetmarke for Invio"
+description = "A simple Interface for creating shipping labels using Sendcloud for Invio"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,7 +12,6 @@ dependencies = [
     "fastapi[standard]>=0.128.0",
     "fints>=5.0.0",
     "httpx>=0.28.1",
-    "inema>=1.0.4",
     "pycountry>=24.6.1",
     "pyipp>=0.17.2",
     "python-dotenv>=1.2.1",

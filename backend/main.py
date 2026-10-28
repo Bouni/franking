@@ -15,7 +15,6 @@ from fastapi.staticfiles import StaticFiles
 
 import order
 import settings
-from internetmarke import Internetmarke
 from invio import Invio, InvioDB
 from mail import Mail
 from models import Address
@@ -78,10 +77,7 @@ def label_info(invoice_number) -> dict | None:
         return None
     if not png.is_file():
         return None
-    if meta.is_file():
-        return json.loads(meta.read_text())
-    # Internetmarke purchased before labels had metadata
-    return {"printer": "ql710", "carrier": "internetmarke"}
+    return json.loads(meta.read_text()) if meta.is_file() else {}
 
 
 @app.get("/api/payments/check")
@@ -194,12 +190,6 @@ async def send_invoice_email(data: dict):
     return JSONResponse({"success": True})
 
 
-@app.get("/api/internetmarke/balance")
-async def internetmarke_balance():
-    im = Internetmarke()
-    return JSONResponse({"balance": im.get_balance()})
-
-
 async def load_invoice(invoice_id: str) -> dict:
     """Invoice with customer, and the current customs data of the products"""
     async with await Invio.create() as invio:
@@ -267,19 +257,13 @@ async def create_shipping_label(data: dict):
         email=customer.get("email") or "",
     )
 
-    # All Sendcloud labels are 103x164 for the QL-1110NWB. Older Internetmarken
-    # keep "ql710" in their metadata and still print there.
-    printer = "ql1110"
-
     if DEBUG:
         logging.info("DEBUG active, shipping label dryrun")
         debug_label(
             label_file(invoice_number, ".png"),
-            printer,
             [invoice_number, code, f"{customer['countryCode']} {weight_g}g"],
         )
         meta = {
-            "printer": printer,
             "carrier": "debug",
             "shipping_option_code": code,
             "weight_g": weight_g,
@@ -292,7 +276,6 @@ async def create_shipping_label(data: dict):
             return JSONResponse({"success": False, "msg": e.user_message})
         label_file(invoice_number, ".png").write_bytes(result.pop("label"))
         meta = {
-            "printer": printer,
             "shipping_option_code": code,
             "weight_g": weight_g,
             **result,
@@ -386,9 +369,7 @@ async def print_shipping(data: dict):
                 "msg": f"No shipping label found for invoice number {invoice_number}",
             }
         )
-    result = await anyio.to_thread.run_sync(
-        print_shipping_label, label, meta["printer"]
-    )
+    result = await anyio.to_thread.run_sync(print_shipping_label, label)
     if result:
         return JSONResponse({"success": True, "msg": "Shipping label printed"})
     logging.info("Printing failed")
@@ -410,15 +391,6 @@ async def cancel_shipping(data: dict):
                 "msg": f"No shipping label found for invoice number {invoice_number}",
             }
         )
-    if meta.get("carrier") == "internetmarke":
-        return JSONResponse(
-            {
-                "success": False,
-                "msg": "Internetmarken can't be cancelled here, "
-                "request a refund in the Portokasse",
-            }
-        )
-
     msg = "Debug label removed"
     if shipment_id := meta.get("shipment_id"):
         try:
