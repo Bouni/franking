@@ -7,6 +7,8 @@ export interface Product {
   name: string;
   unitPrice: number;
   category?: string;
+  // Weight per piece in grams, for the shipping price
+  weightG?: number;
 }
 
 export interface Region {
@@ -34,10 +36,13 @@ export const useOrderStore = defineStore("order", () => {
     }
   }
 
-  async function fetchShipping(country: string): Promise<Shipping | null> {
+  async function fetchShipping(
+    country: string,
+    goodsG: number,
+  ): Promise<Shipping | null> {
     try {
       const response = await api.get("/order/shipping", {
-        params: { country },
+        params: { country, goods_g: goodsG },
       });
       return response.data.success ? response.data : null;
     } catch {

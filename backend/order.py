@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 
 import pycountry
 
-from sendcloud import SENDCLOUD_DEFAULT_WEIGHT_G, Sendcloud, alpha_2
+from sendcloud import Sendcloud, alpha_2, label_weight
 
 # Public order form (order.bouni.de): limit how many orders one client can submit
 RATE_LIMIT = 5
@@ -19,11 +19,14 @@ MANUAL_SHIPPING = {
     "US": {"name": "DHL Paket International", "price": 30},
 }
 
-# Shipping prices are fetched from Sendcloud, cache them per country
+# Shipping prices are fetched from Sendcloud, cache them per country and
+# label weight
 QUOTE_CACHE_S = 3600
-_quotes: dict[str, tuple[float, dict]] = {}
+_quotes: dict[tuple[str, int], tuple[float, dict]] = {}
 
 MAX_QUANTITY = 99
+# Sanity limit for the weight sent by the order form, Warenpost ends at 1 kg
+MAX_GOODS_G = 100_000
 
 # Countries where carriers (DHL) need a state/province. Stored in Invio as
 # "region" (ISO 3166-2 code without the country prefix, e.g. CA, NSW, ON)
@@ -74,19 +77,27 @@ def rate_limited(client_ip: str) -> bool:
     return False
 
 
-async def shipping_quote(country_code: str) -> dict:
-    """Shipping price for the label weight, rounded up to the next full euro"""
+def goods_weight(items: list, products: list) -> float:
+    """Weight of the ordered goods in grams, from the product data in Invio"""
+    weights = {p["id"]: p.get("weightG") or 0 for p in products}
+    return sum(weights.get(i["productId"], 0) * i["quantity"] for i in items)
+
+
+async def shipping_quote(country_code: str, goods_g: float) -> dict:
+    """Shipping price for the label weight of the goods (see label_weight),
+    rounded up to the next full euro"""
     country = alpha_2(country_code)
     if manual := MANUAL_SHIPPING.get(country):
         return {**manual, "price_rounded": manual["price"], "manual": True}
-    cached = _quotes.get(country)
+    _, weight_g = label_weight(goods_g)
+    cached = _quotes.get((country, weight_g))
     if cached and time.monotonic() - cached[0] < QUOTE_CACHE_S:
         return cached[1]
     async with Sendcloud() as sc:
-        quote = await sc.quote(country, SENDCLOUD_DEFAULT_WEIGHT_G)
+        quote = await sc.quote(country, weight_g)
     quote["price_rounded"] = math.ceil(quote["price"])
-    _quotes[country] = (time.monotonic(), quote)
-    logging.info(f"Shipping quote {country}: {quote}")
+    _quotes[(country, weight_g)] = (time.monotonic(), quote)
+    logging.info(f"Shipping quote {country} {weight_g}g: {quote}")
     return quote
 
 

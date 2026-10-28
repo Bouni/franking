@@ -1,5 +1,6 @@
 import base64
 import logging
+import math
 import os
 
 import httpx
@@ -20,7 +21,11 @@ SENDCLOUD_OPTION_NATIONAL = os.getenv("SENDCLOUD_OPTION_NATIONAL", "dhl_de:waren
 SENDCLOUD_OPTION_INTERNATIONAL = os.getenv(
     "SENDCLOUD_OPTION_INTERNATIONAL", "dhl_de:warenpostinternational/premium"
 )
-SENDCLOUD_DEFAULT_WEIGHT_G = int(os.getenv("SENDCLOUD_DEFAULT_WEIGHT_G", "300"))
+# Envelope and bubble wrap: 6 boards, 12 3-pin and 6 4-pin connectors (54 g of
+# goods according to Invio) weighed 73 g ready to ship
+SENDCLOUD_PACKAGING_G = int(os.getenv("SENDCLOUD_PACKAGING_G", "19"))
+# DHL Warenpost is priced in 100 g steps (0-100 g, 101-200 g, ... up to 1 kg)
+SENDCLOUD_WEIGHT_STEP_G = int(os.getenv("SENDCLOUD_WEIGHT_STEP_G", "100"))
 
 SENDER_NAME = os.getenv("SENDER_NAME", "")
 SENDER_ADDRESS = os.getenv("SENDER_ADDRESS", "")
@@ -75,6 +80,26 @@ def apply_product_data(invoice_data: dict, products: list[dict]) -> dict:
             if product.get(field):
                 item[field] = product[field]
     return invoice_data
+
+
+def label_weight(goods_g: float) -> tuple[float, int]:
+    """Estimated parcel weight (goods plus packaging) and the weight the label
+    is bought for: the estimate rounded up to the next price step, the price
+    is the same within a step and the label covers the whole step."""
+    estimate_g = goods_g + SENDCLOUD_PACKAGING_G
+    steps = math.ceil(estimate_g / SENDCLOUD_WEIGHT_STEP_G)
+    return estimate_g, max(steps, 1) * SENDCLOUD_WEIGHT_STEP_G
+
+
+def parcel_weight(invoice_data: dict) -> tuple[float, int]:
+    """label_weight of the invoice items. Items without a weight, like
+    shipping costs, count as 0 g."""
+    return label_weight(
+        sum(
+            (i.get("weightG") or 0) * (i.get("quantity") or 0)
+            for i in invoice_data.get("items", [])
+        )
+    )
 
 
 def needs_customs(country_code: str) -> bool:
