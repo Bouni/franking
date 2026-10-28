@@ -1,13 +1,12 @@
 <template>
   <v-tooltip location="bottom">
     <template #activator="{ props: tooltipProps }">
-      <v-chip
-        v-bind="tooltipProps"
-        :color="sendcloudOutstanding?.unpaid_count ? '#ffca3a' : '#8ac926'"
-        prepend-icon="mdi-receipt-text-outline"
-        size="large"
-        variant="flat"
-      >
+      <!-- Sendcloud navy, a warning icon marks unpaid invoices -->
+      <v-chip v-bind="tooltipProps" color="#002554" size="large" variant="flat">
+        <template #prepend>
+          <v-img alt="Sendcloud" class="mr-2" :src="sendcloudIcon" width="30" />
+        </template>
+
         <v-progress-circular
           v-if="isLoading?.action === 'fetchOutstanding'"
           indeterminate
@@ -17,6 +16,10 @@
 
         <template v-else>
           {{ formatPrice(total) }}
+        </template>
+
+        <template v-if="sendcloudOutstanding?.unpaid_count" #append>
+          <v-icon class="ml-2" color="#ffca3a" icon="mdi-alert-circle" />
         </template>
       </v-chip>
     </template>
@@ -37,6 +40,7 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { computed, onMounted } from "vue";
+import sendcloudIcon from "@/assets/Sendcloud.svg";
 import { formatPrice } from "@/invoice";
 import { useAppStore } from "@/store/app";
 
