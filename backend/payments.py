@@ -104,39 +104,107 @@ async def _fetch_sparkasse(interactive: bool, problems: list[str]) -> list[dict]
     return transactions
 
 
-def _payment_message(payment: dict, invoice_data: dict) -> str:
-    amount = float(payment.get("amount") or 0)
-    message = f"{amount:.2f} EUR via {payment['method']}"
-    if payment.get("name"):
-        message += f" from {payment['name']}"
-    total = invoice_data.get("total")
-    if total is not None and abs(float(total) - amount) >= 0.01:
-        message += f"\nInvoice total is {float(total):.2f} EUR"
+# Payments may be off by a cent from rounding
+TOLERANCE = 0.01
+
+# Underpaid invoices already notified about, with the amount received, so
+# the next run doesn't send the same notification again
+_partial_notified: dict[str, float] = {}
+
+
+def evaluate_payments(transactions: list[dict], total: float) -> dict:
+    """Add up the incoming payments for one invoice and compare them with the
+    invoice total. Outgoing money (refunds) and empty amounts don't count."""
+    incoming = [t for t in transactions if float(t.get("amount") or 0) > 0]
+    received = round(sum(float(t["amount"]) for t in incoming), 2)
+    methods = sorted({t["method"] for t in incoming})
+    names = sorted({t["name"] for t in incoming if t.get("name")})
+    return {
+        "received": received,
+        "total": total,
+        "paid": bool(incoming) and received >= total - TOLERANCE,
+        "difference": round(received - total, 2),
+        "method": " + ".join(methods),
+        "names": names,
+    }
+
+
+def _payment_message(result: dict) -> str:
+    message = f"{result['received']:.2f} EUR via {result['method']}"
+    if result["names"]:
+        message += f" from {', '.join(result['names'])}"
+    if result["difference"] > TOLERANCE:
+        message += (
+            f"\nOverpaid by {result['difference']:.2f} EUR "
+            f"(invoice total {result['total']:.2f} EUR)"
+        )
     return message
+
+
+def _partial_message(result: dict) -> str:
+    message = (
+        f"{result['received']:.2f} of {result['total']:.2f} EUR received via "
+        f"{result['method']}"
+    )
+    if result["names"]:
+        message += f" from {', '.join(result['names'])}"
+    return message + (
+        f", {-result['difference']:.2f} EUR missing. The invoice stays open."
+    )
 
 
 async def run_payment_check(interactive: bool) -> dict:
     """interactive: started from the app, may wait for an S-pushTAN approval"""
     async with _lock:
         problems: list[str] = []
-        payments = {}
+        payments: dict[str, list[dict]] = {}
         for t in await _fetch_paypal(problems):
             if inv := t.get("invoice"):
-                payments[str(inv)] = {**t, "method": "PayPal"}
+                payments.setdefault(str(inv), []).append({**t, "method": "PayPal"})
         for t in await _fetch_sparkasse(interactive, problems):
             if inv := t.get("invoice"):
-                payments[str(inv)] = {**t, "method": "Bank Transfer"}
+                payments.setdefault(str(inv), []).append(
+                    {**t, "method": "Bank Transfer"}
+                )
 
         paid_invoices = []
+        partial_invoices = []
         async with await Invio.create() as invio:
             raw_invoices = await invio.get_invoices()
             for i in raw_invoices:
                 inv_num = str(i.get("invoiceNumber"))
                 if i.get("status") != "sent" or inv_num not in payments:
                     continue
-                payment = payments[inv_num]
-                logging.info(f"Payment found: {inv_num} via {payment['method']}")
-                await invio.set_status_paid(i.get("id"), payment["method"])
+                invoice_data = await invio.get_invoice_data(i.get("id"))
+                if invoice_data.get("total") is None:
+                    logging.error(f"{inv_num} has no total, payment not checked")
+                    problems.append(f"{inv_num} has no total, payment not checked")
+                    continue
+                result = evaluate_payments(
+                    payments[inv_num], float(invoice_data["total"])
+                )
+                if not result["received"]:
+                    continue
+
+                if not result["paid"]:
+                    logging.info(
+                        f"Partial payment for {inv_num}: {result['received']:.2f} "
+                        f"of {result['total']:.2f} EUR, invoice stays open"
+                    )
+                    partial_invoices.append({"invoiceNumber": inv_num, **result})
+                    if _partial_notified.get(inv_num) != result["received"]:
+                        _partial_notified[inv_num] = result["received"]
+                        await _notify(
+                            f"Partial payment: {inv_num}",
+                            _partial_message(result),
+                            ["warning"],
+                            4,
+                        )
+                    continue
+
+                logging.info(f"Payment found: {inv_num} via {result['method']}")
+                await invio.set_status_paid(i.get("id"), result["method"])
+                _partial_notified.pop(inv_num, None)
                 invoice_data = await invio.get_invoice_data(i.get("id"))
                 invoice_data["customer"] = await invio.get_customer_data(
                     invoice_data.get("customerId")
@@ -145,13 +213,13 @@ async def run_payment_check(interactive: bool) -> dict:
                     {
                         "id": i.get("id"),
                         "invoiceNumber": i.get("invoiceNumber"),
-                        "method": payment["method"],
+                        "method": result["method"],
                         "invoice_data": invoice_data,
                     }
                 )
                 await _notify(
                     f"Payment received: {inv_num}",
-                    _payment_message(payment, invoice_data),
+                    _payment_message(result),
                     ["moneybag"],
                     4,
                 )
@@ -166,6 +234,8 @@ async def run_payment_check(interactive: bool) -> dict:
         "processed": len(raw_invoices),
         "paid": len(paid_invoices),
         "paid_invoices": paid_invoices,
+        # Received less than the total, these stay open
+        "partial_invoices": partial_invoices,
         # Shown in the app, the paid invoices above are still valid
         "problems": problems,
     }

@@ -377,6 +377,13 @@ export const useAppStore = defineStore("app", () => {
       } else {
         showToast("No new paid invoices!", "#2196f3", 10);
       }
+      for (const inv of response.data.partial_invoices ?? []) {
+        showToast(
+          `Invoice ${inv.invoiceNumber}: only ${inv.received.toFixed(2)} of ${inv.total.toFixed(2)} € received, it stays open`,
+          "#ffca3a",
+          15,
+        );
+      }
       for (const problem of response.data.problems ?? []) {
         showToast(problem, "#ffca3a", 15);
       }
