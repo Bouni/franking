@@ -5,8 +5,7 @@
 # Frontend (Vite): http://localhost:3001
 # Backend (FastAPI): http://localhost:8000/docs
 #
-# DEBUG defaults to true (dry run): no Internetmarke or Sendcloud label is
-# bought, a "DEBUG - NOT A LABEL" placeholder is created instead.
+# DEBUG defaults to true (dry run): no Sendcloud label is bought, a "DEBUG - NOT A LABEL" placeholder is created instead.
 # Labels are written to ./labels.
 
 services:

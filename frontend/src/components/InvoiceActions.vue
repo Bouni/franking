@@ -4,7 +4,6 @@ import sparkasseIcon from "@/assets/Sparkasse.svg";
 import ActionButton from "@/components/ActionButton.vue";
 import ShippingButton from "@/components/ShippingButton.vue";
 import SpeedDialButton from "@/components/SpeedDialButton.vue";
-import { printerNames } from "@/invoice";
 import { useAppStore } from "@/store/app";
 
 defineProps<{
@@ -97,11 +96,7 @@ function confirmCancelLabel(invoice_number: string) {
         color="#ff924c"
         :disabled="!invoice.label"
         icon="mdi-printer"
-        :tooltip="
-          invoice.label
-            ? `Print shipping label (${printerNames[invoice.label.printer] ?? invoice.label.printer})`
-            : 'Print shipping label'
-        "
+        tooltip="Print shipping label"
         @click="printLabel(invoice.invoiceNumber)"
       />
 
@@ -109,7 +104,7 @@ function confirmCancelLabel(invoice_number: string) {
         action="cancelLabel"
         :action-id="invoice.invoiceNumber"
         color="#e63946"
-        :disabled="!invoice.label || invoice.label.carrier === 'internetmarke'"
+        :disabled="!invoice.label"
         icon="mdi-cancel"
         tooltip="Cancel shipping label"
         @click="confirmCancelLabel(invoice.invoiceNumber)"
