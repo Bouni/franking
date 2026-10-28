@@ -53,6 +53,30 @@ def shipping_option(country_code: str) -> str:
     return SENDCLOUD_OPTION_INTERNATIONAL
 
 
+CUSTOMS_FIELDS = ("hsCode", "countryOfOrigin", "weightG")
+CUSTOMS_FIELD_NAMES = {
+    "hsCode": "HS code",
+    "countryOfOrigin": "country of origin",
+    "weightG": "weight",
+}
+
+
+def apply_product_data(invoice_data: dict, products: list[dict]) -> dict:
+    """Invio copies the customs data into the invoice items when the invoice
+    is created, and issued invoices can't be changed any more. Customs data
+    is product data, so the current product values win, the item copy is
+    only the fallback (e.g. for products that no longer exist)."""
+    by_id = {p.get("id"): p for p in products}
+    for item in invoice_data.get("items", []):
+        product = by_id.get(item.get("productId"))
+        if not product:
+            continue
+        for field in CUSTOMS_FIELDS:
+            if product.get(field):
+                item[field] = product[field]
+    return invoice_data
+
+
 def needs_customs(country_code: str) -> bool:
     return alpha_2(country_code) not in EU_COUNTRIES
 
@@ -130,19 +154,28 @@ class Sendcloud:
         }
 
     def _customs(self, invoice_data: dict) -> tuple[dict, list]:
-        """Customs lines from the invoice items, using the product data Invio
-        provides (hsCode, countryOfOrigin, weightG). Only items that have all
-        of it are declared, everything else (e.g. shipping costs) is ignored."""
-        fields = ("hsCode", "countryOfOrigin", "weightG")
+        """Customs lines from the invoice items, using the product data
+        (hsCode, countryOfOrigin, weightG, see apply_product_data). Items
+        without a product, like shipping costs, are not declared. Products
+        without customs data stop the label, a declaration missing goods
+        would not match the parcel."""
         items = []
         for i in invoice_data.get("items", []):
-            if not all(i.get(f) for f in fields):
+            missing = [f for f in CUSTOMS_FIELDS if not i.get(f)]
+            if missing and not i.get("productId"):
                 continue
+            if missing:
+                raise SendcloudError(
+                    f"'{i.get('description')}' has no "
+                    f"{', '.join(CUSTOMS_FIELD_NAMES[f] for f in missing)}, "
+                    "set it for the product in Invio"
+                )
             # Sendcloud works with whole grams, anything below ends up as 0
             if i["weightG"] < 1:
                 raise SendcloudError(
                     f"Weight of '{i.get('description')}' is {i['weightG']:g} g, "
-                    "set the real weight per piece in grams in Invio"
+                    "set the weight per piece in grams for the product in Invio "
+                    "(a value below 1 was probably entered in kg)"
                 )
             items.append(
                 {
