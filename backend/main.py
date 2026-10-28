@@ -4,6 +4,7 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 import anyio
@@ -199,6 +200,40 @@ async def load_invoice(invoice_id: str) -> dict:
     return apply_product_data(invoice_data, products)
 
 
+def open_label_costs(since: datetime | None) -> float:
+    """Prices of the labels Sendcloud hasn't invoiced yet"""
+    total = 0.0
+    for f in Path(LABEL_DIR).glob("*.json"):
+        # Only labels, not settings.json or cancelled labels
+        if f.name.endswith(".cancelled.json") or not f.with_suffix(".png").is_file():
+            continue
+        meta = json.loads(f.read_text())
+        if "price" not in meta:
+            continue
+        created = datetime.fromisoformat(meta["created"])
+        if since is None or created > since:
+            total += meta["price"]
+    return round(total, 2)
+
+
+@app.get("/api/sendcloud/outstanding")
+async def sendcloud_outstanding():
+    try:
+        async with Sendcloud() as sc:
+            invoices = await sc.invoices()
+    except (SendcloudError, httpx.HTTPError) as e:
+        logging.error(f"Sendcloud invoices failed: {e}")
+        return JSONResponse({"success": False, "msg": "Sendcloud invoices unavailable"})
+    return JSONResponse(
+        {
+            "success": True,
+            "open": open_label_costs(invoices["last_invoice"]),
+            "unpaid": invoices["unpaid"],
+            "unpaid_count": invoices["unpaid_count"],
+        }
+    )
+
+
 @app.post("/api/shipping/label")
 async def create_shipping_label(data: dict):
     invoice_data = await load_invoice(data.get("invoice_id", ""))
@@ -270,6 +305,13 @@ async def create_shipping_label(data: dict):
         try:
             async with Sendcloud() as sc:
                 result = await sc.announce(invoice_data, address, code, weight_g)
+                # Sendcloud invoices the label later, keep its price for the
+                # open shipping costs
+                try:
+                    quote = await sc.quote(customer["countryCode"], weight_g)
+                    result["price"] = quote["price"]
+                except SendcloudError as e:
+                    logging.error(f"No price for the label of {invoice_number}: {e}")
         except SendcloudError as e:
             return JSONResponse({"success": False, "msg": e.user_message})
         label_file(invoice_number, ".png").write_bytes(result.pop("label"))
@@ -279,6 +321,7 @@ async def create_shipping_label(data: dict):
             **result,
         }
 
+    meta["created"] = datetime.now(UTC).isoformat()
     label_file(invoice_number, ".json").write_text(json.dumps(meta))
     logging.info(f"Shipping label {code} ({weight_g}g) created for {invoice_number}")
 

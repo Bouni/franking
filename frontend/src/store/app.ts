@@ -7,6 +7,7 @@ import "toastify-js/src/toastify.css";
 export interface LoadingState {
   id: number | string;
   action:
+    | "fetchOutstanding"
     | "fetchInvoices"
     | "markInvoicePaid"
     | "markInvoiceComplete"
@@ -36,7 +37,15 @@ export interface InvoiceEmail {
   recipient?: string;
 }
 
+export interface Outstanding {
+  // Labels Sendcloud hasn't invoiced yet ("Offene Versandkredite")
+  open: number;
+  unpaid: number;
+  unpaid_count: number;
+}
+
 export const useAppStore = defineStore("app", () => {
+  const sendcloudOutstanding = ref<Outstanding | null>(null);
   const invoices = ref<any[]>([]);
   const isLoading = ref<LoadingState | null>(null);
   const settings = ref<Settings | null>(null);
@@ -280,6 +289,30 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
+  async function fetchOutstanding() {
+    isLoading.value = { id: "", action: "fetchOutstanding" };
+
+    try {
+      const response = await api.get("/sendcloud/outstanding");
+      if (!response.data.success) {
+        throw new Error(response.data.msg);
+      }
+      sendcloudOutstanding.value = {
+        open: response.data.open,
+        unpaid: response.data.unpaid,
+        unpaid_count: response.data.unpaid_count,
+      };
+    } catch (error: any) {
+      showToast(
+        `Error fetching Sendcloud invoices: ${error.message || "Error fetching Sendcloud invoices"}`,
+        "#ff595e",
+        10,
+      );
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
   async function createLabel(invoice_id: string) {
     isLoading.value = { id: invoice_id, action: "createLabel" };
 
@@ -314,6 +347,7 @@ export const useAppStore = defineStore("app", () => {
     } finally {
       isLoading.value = null;
     }
+    fetchOutstanding();
   }
 
   async function cancelLabel(invoice_number: string) {
@@ -341,6 +375,7 @@ export const useAppStore = defineStore("app", () => {
     } finally {
       isLoading.value = null;
     }
+    fetchOutstanding();
   }
 
   async function updatePayments() {
@@ -413,6 +448,7 @@ export const useAppStore = defineStore("app", () => {
   }
 
   return {
+    sendcloudOutstanding,
     startPaymentWatch,
     stopPaymentWatch,
     settings,
@@ -424,6 +460,7 @@ export const useAppStore = defineStore("app", () => {
     markInvoicePaid,
     markInvoiceComplete,
     printLabel,
+    fetchOutstanding,
     createLabel,
     cancelLabel,
     printInvoice,
