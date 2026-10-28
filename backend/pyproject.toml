@@ -13,9 +13,7 @@ dependencies = [
     "fints>=5.0.0",
     "httpx>=0.28.1",
     "pycountry>=24.6.1",
-    "pyipp>=0.17.2",
     "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.31",
 ]
 
 [tool.uv.sources]

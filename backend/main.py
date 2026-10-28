@@ -39,8 +39,6 @@ logging.info(f"DEBUG = {DEBUG}")
 
 LABEL_PATH = os.getenv("LABEL_PATH", default="/opt/docker/invio/labels")
 
-BASE_PATH = Path(__file__).resolve().parent.parent
-
 logging.basicConfig(level=logging.INFO)
 
 
