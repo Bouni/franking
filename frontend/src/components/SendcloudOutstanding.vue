@@ -15,7 +15,7 @@
         />
 
         <template v-else>
-          {{ formatPrice(total) }}
+          {{ owed(total) }}
         </template>
 
         <template v-if="sendcloudOutstanding?.unpaid_count" #append>
@@ -26,13 +26,11 @@
 
     <div>Sendcloud shipping costs</div>
 
-    <div>
-      Not invoiced yet: {{ formatPrice(sendcloudOutstanding?.open ?? 0) }}
-    </div>
+    <div>Not invoiced yet: {{ owed(sendcloudOutstanding?.open ?? 0) }}</div>
 
     <div>
       Unpaid invoices ({{ sendcloudOutstanding?.unpaid_count ?? 0 }}):
-      {{ formatPrice(sendcloudOutstanding?.unpaid ?? 0) }}
+      {{ owed(sendcloudOutstanding?.unpaid ?? 0) }}
     </div>
   </v-tooltip>
 </template>
@@ -53,6 +51,11 @@ const total = computed(
     (sendcloudOutstanding.value?.open ?? 0) +
     (sendcloudOutstanding.value?.unpaid ?? 0),
 );
+
+// Money owed to Sendcloud, negative like in the Sendcloud panel
+function owed(value: number) {
+  return formatPrice(-value);
+}
 
 onMounted(() => {
   fetchOutstanding();
