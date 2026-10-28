@@ -20,6 +20,10 @@ EMAIL_USER = os.getenv("EMAIL_USER", default="")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", default="")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER", default="")
 
+# IMAP folders for the copies of sent emails, created when missing
+INVOICE_FOLDER = '"Gewerbe.Verschickte Rechnungen"'
+TRACKING_FOLDER = '"Gewerbe.Verschickte Tracking"'
+
 INVIO_URL = os.getenv("INVIO_URL", "")
 INVIO_USER = os.getenv("INVIO_USER", "")
 INVIO_PASSWORD = os.getenv("INVIO_PASSWORD", "")
@@ -77,6 +81,17 @@ class Mail:
             use_tls=True,
         )
 
+    async def _save_copy(self, message: MIMEMultipart, folder: str):
+        """Store a copy of a sent email in an IMAP folder, creating it first
+        if it doesn't exist yet"""
+        async with self.imap_session() as imap:
+            response = await imap.append(message.as_bytes(), folder)
+            if response.result != "OK":
+                await imap.create(folder)
+                response = await imap.append(message.as_bytes(), folder)
+            if response.result != "OK":
+                logging.error(f"Failed to append to {folder}: {response.lines}")
+
     async def send_tracking(self):
         message = self._message()
         await self._send(message)
@@ -84,6 +99,11 @@ class Mail:
             f"Tracking email for {self.invoice_data.get('invoiceNumber')} "
             f"sent to {message['To']}"
         )
+        # The email is out, a missing copy must not report it as failed
+        try:
+            await self._save_copy(message, TRACKING_FOLDER)
+        except Exception as e:  # noqa: BLE001
+            logging.error(f"Copy of the tracking email not saved: {e}")
 
     async def send_invoice(self):
         message = self._message()
@@ -106,8 +126,4 @@ class Mail:
         )
 
         # Save to Sent folder
-        async with self.imap_session() as imap:
-            folder = '"Gewerbe.Verschickte Rechnungen"'
-            response = await imap.append(message.as_bytes(), folder)
-            if response.result != "OK":
-                logging.error(f"Failed to append to {folder}: {response.lines}")
+        await self._save_copy(message, INVOICE_FOLDER)
