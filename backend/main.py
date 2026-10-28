@@ -594,6 +594,19 @@ async def paypal_ipn_listener(request: Request):
                 if i.get("status") == "sent":
                     inv_num = str(i.get("invoiceNumber"))
                     if inv_num in note:
+                        invoice_data = await invio.get_invoice_data(i.get("id"))
+                        result = payments.evaluate_payments(
+                            [{"amount": amount, "method": "PayPal"}],
+                            float(invoice_data.get("total") or 0),
+                        )
+                        # Partial payments are added up by the payment check,
+                        # which also sends the notification for them
+                        if invoice_data.get("total") is None or not result["paid"]:
+                            logging.info(
+                                f"{inv_num}: {amount} {currency} via PayPal (IPN) "
+                                "doesn't cover the invoice, left to the payment check"
+                            )
+                            continue
                         logging.info(f"Match found: {inv_num} via PayPal (IPN)")
                         await invio.set_status_paid(i.get("id"), "PayPal")
                         payments.mark_changed()
