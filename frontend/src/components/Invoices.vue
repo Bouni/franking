@@ -2,6 +2,8 @@
   <div>
     <v-card class="mb-4" variant="flat">
       <v-card-text class="d-flex flex-wrap align-center ga-3">
+        <SendcloudOutstanding />
+
         <v-btn
           color="primary"
           :loading="isLoading?.action === 'updatePayments'"
@@ -290,6 +292,7 @@ import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
 import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceCard from "@/components/InvoiceCard.vue";
+import SendcloudOutstanding from "@/components/SendcloudOutstanding.vue";
 import {
   formatDate,
   formatPrice,

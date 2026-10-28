@@ -2,6 +2,7 @@ import base64
 import logging
 import math
 import os
+from datetime import UTC, datetime
 
 import httpx
 import pycountry
@@ -12,6 +13,8 @@ from models import Address
 load_dotenv()
 
 SENDCLOUD_URL = "https://panel.sendcloud.sc/api/v3"
+# Invoices with their paid flag are only listed by the v2 API
+SENDCLOUD_INVOICES_URL = "https://panel.sendcloud.sc/api/v2/user/invoices"
 SENDCLOUD_PUBLIC_KEY = os.getenv("SENDCLOUD_PUBLIC_KEY", "")
 SENDCLOUD_PRIVATE_KEY = os.getenv("SENDCLOUD_PRIVATE_KEY", "")
 SENDCLOUD_SENDER_ADDRESS_ID = os.getenv("SENDCLOUD_SENDER_ADDRESS_ID", "")
@@ -106,6 +109,18 @@ def needs_customs(country_code: str) -> bool:
     return alpha_2(country_code) not in EU_COUNTRIES
 
 
+def invoice_date(value: str | None) -> datetime | None:
+    """The v2 API uses "28-10-2026 19:26:16", taken as UTC"""
+    for fmt in ("%d-%m-%Y %H:%M:%S", "%d-%m-%Y", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(str(value)[:19], fmt).replace(tzinfo=UTC)
+        except ValueError:
+            continue
+    if value:
+        logging.error(f"Unknown Sendcloud invoice date {value!r}")
+    return None
+
+
 class SendcloudError(Exception):
     def __init__(self, msg: str, status_code: int | None = None):
         super().__init__(msg)
@@ -123,7 +138,12 @@ class Sendcloud:
         )
 
     async def _post(self, path: str, payload: dict | None = None) -> dict:
-        response = await self.client.post(path, json=payload)
+        return self._check(path, await self.client.post(path, json=payload))
+
+    async def _get(self, path: str) -> dict:
+        return self._check(path, await self.client.get(path))
+
+    def _check(self, path: str, response: httpx.Response) -> dict:
         if response.is_error:
             logging.error(f"Sendcloud {path} failed: {response.text}")
             try:
@@ -291,6 +311,19 @@ class Sendcloud:
         """Returns {"status": "cancelled" | "queued", "message": ...}"""
         data = await self._post(f"/shipments/{shipment_id}/cancel")
         return data.get("data", {})
+
+    async def invoices(self) -> dict:
+        """Unpaid Sendcloud invoices and the date of the latest one. Shipping
+        costs after that date are not invoiced yet."""
+        data = await self._get(SENDCLOUD_INVOICES_URL)
+        invoices = data.get("invoices", [])
+        unpaid = [i for i in invoices if not i.get("isPayed")]
+        dates = [d for i in invoices if (d := invoice_date(i.get("date")))]
+        return {
+            "unpaid": round(sum(float(i.get("price_incl") or 0) for i in unpaid), 2),
+            "unpaid_count": len(unpaid),
+            "last_invoice": max(dates, default=None),
+        }
 
     async def close(self):
         await self.client.aclose()
