@@ -24,11 +24,11 @@ import payments
 from payments import payment_check_loop, run_payment_check
 from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
 from sendcloud import (
-    SENDCLOUD_DEFAULT_WEIGHT_G,
     Sendcloud,
     SendcloudError,
     alpha_2,
     apply_product_data,
+    parcel_weight,
     shipping_option,
 )
 
@@ -243,25 +243,11 @@ async def create_shipping_label(data: dict):
         )
     # DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
     code = shipping_option(customer["countryCode"])
-    weight_g = SENDCLOUD_DEFAULT_WEIGHT_G
-
-    # The label is bought for the default weight, make sure the goods fit
-    items_g = sum(
-        (i.get("weightG") or 0) * (i.get("quantity") or 0)
-        for i in invoice_data.get("items", [])
+    # Heavier parcels get the next weight step of the same product
+    estimate_g, weight_g = parcel_weight(invoice_data)
+    logging.info(
+        f"{invoice_number}: parcel estimated at {estimate_g:g}g, label for {weight_g}g"
     )
-    if items_g > weight_g:
-        logging.info(
-            f"{invoice_number}: items weigh {items_g:g}g, more than {weight_g}g"
-        )
-        return JSONResponse(
-            {
-                "success": False,
-                "msg": f"Items weigh {items_g:g} g, which exceeds the label "
-                f"weight of {weight_g} g (SENDCLOUD_DEFAULT_WEIGHT_G). "
-                "No label was purchased.",
-            }
-        )
 
     label_path = Path(LABEL_PATH)
     if not label_path.is_dir():
@@ -292,7 +278,12 @@ async def create_shipping_label(data: dict):
             printer,
             [invoice_number, code, f"{customer['countryCode']} {weight_g}g"],
         )
-        meta = {"printer": printer, "carrier": "debug", "shipping_option_code": code}
+        meta = {
+            "printer": printer,
+            "carrier": "debug",
+            "shipping_option_code": code,
+            "weight_g": weight_g,
+        }
     else:
         try:
             async with Sendcloud() as sc:
@@ -300,10 +291,15 @@ async def create_shipping_label(data: dict):
         except SendcloudError as e:
             return JSONResponse({"success": False, "msg": e.user_message})
         label_file(invoice_number, ".png").write_bytes(result.pop("label"))
-        meta = {"printer": printer, "shipping_option_code": code, **result}
+        meta = {
+            "printer": printer,
+            "shipping_option_code": code,
+            "weight_g": weight_g,
+            **result,
+        }
 
     label_file(invoice_number, ".json").write_text(json.dumps(meta))
-    logging.info(f"Shipping label {code} created for {invoice_number}")
+    logging.info(f"Shipping label {code} ({weight_g}g) created for {invoice_number}")
 
     tracking_email = await send_tracking_email(invoice_data, meta)
     if tracking_email["sent"]:
@@ -312,7 +308,7 @@ async def create_shipping_label(data: dict):
     return JSONResponse(
         {
             "success": True,
-            "msg": f"Shipping label {code} created",
+            "msg": f"Shipping label {code} ({weight_g} g) created",
             "label": meta,
             "tracking_email": tracking_email,
         }
@@ -451,18 +447,22 @@ async def get_products():
     async with await Invio.create() as invio:
         products = await invio.get_products()
     return [
-        {k: p.get(k) for k in ("id", "name", "unitPrice", "category")}
+        {k: p.get(k) for k in ("id", "name", "unitPrice", "category", "weightG")}
         for p in products
         if p.get("isActive", True)
     ]
 
 
 @app.get("/api/order/shipping")
-async def order_shipping(country: str):
+async def order_shipping(country: str, goods_g: float = 0):
+    # Only for the price shown in the form, submitting recalculates the weight
+    # from the product data
     if not order.valid_country(country):
         return JSONResponse({"success": False, "msg": "Invalid country"})
+    if not 0 <= goods_g <= order.MAX_GOODS_G:
+        return JSONResponse({"success": False, "msg": "Invalid weight"})
     try:
-        quote = await order.shipping_quote(country)
+        quote = await order.shipping_quote(country, goods_g)
     except (SendcloudError, ValueError) as e:
         logging.error(f"Shipping quote for {country} failed: {e}")
         return JSONResponse({"success": False, "msg": "No shipping price available"})
@@ -500,7 +500,9 @@ async def submit_order(data: dict, request: Request):
         products = await invio.get_products()
         try:
             values, items = order.validate(data, products)
-            quote = await order.shipping_quote(values["country"])
+            quote = await order.shipping_quote(
+                values["country"], order.goods_weight(items, products)
+            )
         except order.OrderError as e:
             return JSONResponse(
                 {"success": False, "msg": e.user_message}, status_code=400

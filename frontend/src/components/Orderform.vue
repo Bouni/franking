@@ -414,7 +414,9 @@
               <v-btn
                 block
                 color="primary"
-                :disabled="selectedItems.length === 0 || !shipping"
+                :disabled="
+                  selectedItems.length === 0 || !shipping || shippingLoading
+                "
                 :loading="submitting"
                 prepend-icon="mdi-send"
                 size="large"
@@ -625,9 +627,17 @@ watch(
   { immediate: true },
 );
 
-// Shipping costs depend on the destination country
+// Shipping costs depend on the destination country and the weight of the
+// goods (Warenpost is priced in weight steps)
 const shipping = ref<Shipping | null>(null);
 const shippingLoading = ref(false);
+
+const goodsWeight = computed(() =>
+  selectedItems.value.reduce(
+    (sum, item) => sum + (item.weightG ?? 0) * item.quantity,
+    0,
+  ),
+);
 
 // State/province list for countries whose carriers need it
 const regions = ref<Region[]>([]);
@@ -640,16 +650,32 @@ watch(
   },
 );
 
+// Wait for the -/+ clicks to settle, and only use the latest answer
+let shippingTimer: ReturnType<typeof setTimeout> | undefined;
+let shippingRequest = 0;
+
 watch(
   () => order.value.country,
-  async (country) => {
+  () => {
     shipping.value = null;
-    if (!country) return;
-    shippingLoading.value = true;
-    shipping.value = await orderStore.fetchShipping(country);
-    shippingLoading.value = false;
   },
 );
+
+watch([() => order.value.country, goodsWeight], ([country, weight]) => {
+  clearTimeout(shippingTimer);
+  if (!country) {
+    shippingLoading.value = false;
+    return;
+  }
+  shippingLoading.value = true;
+  const request = ++shippingRequest;
+  shippingTimer = setTimeout(async () => {
+    const result = await orderStore.fetchShipping(country, weight);
+    if (request !== shippingRequest) return;
+    shipping.value = result;
+    shippingLoading.value = false;
+  }, 300);
+});
 
 // The US only accepts goods from private senders as gifts, explain that
 const usNotice = ref(false);
