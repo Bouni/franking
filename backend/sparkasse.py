@@ -100,18 +100,21 @@ class Sparkasse:
 
             transaction_data = []
 
+            # With an invoice number in the purpose, and incoming transfers
+            # without one, which the payment check tries to match by name
             for transaction in transactions:
-                if "INV" in transaction.data.get("purpose"):
-                    transaction_data.append(
-                        {
-                            "invoice": self.get_invoice_number(
-                                transaction.data.get("purpose")
-                            ),
-                            "name": transaction.data.get("applicant_name"),
-                            "date": transaction.data.get("date").isoformat(),
-                            "amount": float(transaction.data.get("amount", {}).amount),
-                        }
-                    )
+                purpose = transaction.data.get("purpose") or ""
+                amount = float(transaction.data.get("amount", {}).amount)
+                if "INV" not in purpose and amount <= 0:
+                    continue
+                transaction_data.append(
+                    {
+                        "invoice": self.get_invoice_number(purpose),
+                        "name": transaction.data.get("applicant_name") or "",
+                        "date": transaction.data.get("date").isoformat(),
+                        "amount": amount,
+                    }
+                )
 
             return transaction_data
 

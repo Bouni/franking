@@ -16,6 +16,7 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
 - print the invoice on paper
 - Integration with PayPal and Sparkasse (via FinTS) to fetch the latest payment data and update the payment status with that data
   - checked automatically every 10 minutes (`PAYMENT_CHECK_INTERVAL`), with a ntfy notification for every received payment
+  - payments without invoice number are matched by the customer's email (PayPal) or name, when the amount equals the invoice total and the match is unambiguous
 
 All data is read via the Invio API.
 

@@ -5,6 +5,7 @@ PAYMENT_CHECK_INTERVAL seconds in the background."""
 import asyncio
 import logging
 import os
+import unicodedata
 from datetime import datetime, timezone
 
 import anyio
@@ -111,6 +112,9 @@ TOLERANCE = 0.01
 # the next run doesn't send the same notification again
 _partial_notified: dict[str, float] = {}
 
+# Invoices already notified about an ambiguous name / email match
+_ambiguous_notified: set[str] = set()
+
 
 def evaluate_payments(transactions: list[dict], total: float) -> dict:
     """Add up the incoming payments for one invoice and compare them with the
@@ -153,23 +157,131 @@ def _partial_message(result: dict) -> str:
     )
 
 
+# Words that say nothing about who paid
+_NAME_NOISE = {"dr", "herr", "frau", "mr", "mrs", "ms", "und", "and", "u"}
+_UMLAUTS = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+
+
+def name_words(name: str | None) -> set[str]:
+    """Words of a name, lowercase, umlauts written out, accents and
+    punctuation removed: "MUELLER, Hans" and "Hans Müller" give the same"""
+    text = unicodedata.normalize("NFKD", (name or "").lower().translate(_UMLAUTS))
+    text = "".join(
+        c if c.isalnum() else " " for c in text if not unicodedata.combining(c)
+    )
+    return {w for w in text.split() if len(w) > 1 and w not in _NAME_NOISE}
+
+
+def names_match(customer_name: str | None, payer_name: str | None) -> bool:
+    """All words of the shorter name appear in the other one, and at least two
+    words: first and last name, a surname alone is not enough"""
+    a, b = name_words(customer_name), name_words(payer_name)
+    shorter, longer = sorted((a, b), key=len)
+    return len(shorter) >= 2 and shorter <= longer
+
+
+def _matched_by(invoice: dict, payment: dict) -> str | None:
+    customer = invoice["customer"]
+    email = (customer.get("email") or "").strip().lower()
+    if email and email == (payment.get("email") or "").strip().lower():
+        return "email"
+    for name in (customer.get("name"), customer.get("contactName")):
+        if names_match(name, payment.get("name")):
+            return "name"
+    return None
+
+
+def match_by_customer(invoices: list[dict], payments: list[dict]) -> tuple:
+    """Pair open invoices with payments that carry no invoice number. A pair
+    needs the customer's email or name, exactly the invoice total and a
+    payment date on or after the invoice date. It must be unambiguous: the
+    payment fits no other invoice (open or already paid) and the invoice no
+    other payment. Returns the matches as (invoice, payment, "email" |
+    "name") and the open invoices that fit, but not unambiguously."""
+    candidates = []
+    for invoice in invoices:
+        for payment in payments:
+            if abs(float(payment.get("amount") or 0) - invoice["total"]) >= TOLERANCE:
+                continue
+            if (payment.get("date") or "")[:10] < invoice["issue_date"][:10]:
+                continue
+            if how := _matched_by(invoice, payment):
+                candidates.append((invoice, payment, how))
+
+    def count(key, obj):
+        return sum(1 for c in candidates if c[key] is obj)
+
+    matches = [
+        c
+        for c in candidates
+        if c[0]["open"] and count(0, c[0]) == 1 and count(1, c[1]) == 1
+    ]
+    ambiguous = []
+    for invoice, _, _ in candidates:
+        if (
+            invoice["open"]
+            and not any(m[0] is invoice for m in matches)
+            and invoice not in ambiguous
+        ):
+            ambiguous.append(invoice)
+    return matches, ambiguous
+
+
 async def run_payment_check(interactive: bool) -> dict:
     """interactive: started from the app, may wait for an S-pushTAN approval"""
     async with _lock:
         problems: list[str] = []
         payments: dict[str, list[dict]] = {}
-        for t in await _fetch_paypal(problems):
-            if inv := t.get("invoice"):
-                payments.setdefault(str(inv), []).append({**t, "method": "PayPal"})
-        for t in await _fetch_sparkasse(interactive, problems):
-            if inv := t.get("invoice"):
-                payments.setdefault(str(inv), []).append(
-                    {**t, "method": "Bank Transfer"}
-                )
+        # Incoming payments without invoice number, matched by email or name
+        unassigned: list[dict] = []
+        for method, transactions in (
+            ("PayPal", await _fetch_paypal(problems)),
+            ("Bank Transfer", await _fetch_sparkasse(interactive, problems)),
+        ):
+            for t in transactions:
+                if inv := t.get("invoice"):
+                    payments.setdefault(str(inv), []).append({**t, "method": method})
+                else:
+                    unassigned.append({**t, "method": method})
 
         paid_invoices = []
         partial_invoices = []
         async with await Invio.create() as invio:
+
+            async def mark_paid(invoice_id, inv_num, result, matched_by=None):
+                logging.info(
+                    f"Payment found: {inv_num} via {result['method']}"
+                    + (f", matched by {matched_by}" if matched_by else "")
+                )
+                await invio.set_status_paid(invoice_id, result["method"])
+                _partial_notified.pop(inv_num, None)
+                invoice_data = await invio.get_invoice_data(invoice_id)
+                invoice_data["customer"] = await invio.get_customer_data(
+                    invoice_data.get("customerId")
+                )
+                paid_invoices.append(
+                    {
+                        "id": invoice_id,
+                        "invoiceNumber": inv_num,
+                        "method": result["method"],
+                        "matched_by": matched_by or "invoice number",
+                        "invoice_data": invoice_data,
+                    }
+                )
+                message = _payment_message(result)
+                if matched_by:
+                    message += (
+                        f"\nNo invoice number in the payment, matched by "
+                        f"{matched_by}. Please check."
+                    )
+                await _notify(
+                    f"Payment received: {inv_num}"
+                    + (f" (matched by {matched_by})" if matched_by else ""),
+                    message,
+                    ["moneybag"],
+                    4,
+                )
+
             raw_invoices = await invio.get_invoices()
             for i in raw_invoices:
                 inv_num = str(i.get("invoiceNumber"))
@@ -202,27 +314,54 @@ async def run_payment_check(interactive: bool) -> dict:
                         )
                     continue
 
-                logging.info(f"Payment found: {inv_num} via {result['method']}")
-                await invio.set_status_paid(i.get("id"), result["method"])
-                _partial_notified.pop(inv_num, None)
-                invoice_data = await invio.get_invoice_data(i.get("id"))
-                invoice_data["customer"] = await invio.get_customer_data(
-                    invoice_data.get("customerId")
-                )
-                paid_invoices.append(
-                    {
-                        "id": i.get("id"),
-                        "invoiceNumber": i.get("invoiceNumber"),
-                        "method": result["method"],
-                        "invoice_data": invoice_data,
-                    }
-                )
-                await _notify(
-                    f"Payment received: {inv_num}",
-                    _payment_message(result),
-                    ["moneybag"],
-                    4,
-                )
+                await mark_paid(i.get("id"), inv_num, result)
+
+            # Second pass: open invoices without any invoice number payment,
+            # matched by the customer's email or name. Paid and completed
+            # invoices take part too, without being changed: a payment that
+            # also fits one of them (e.g. marked paid by hand) is ambiguous.
+            if unassigned:
+                customers = {c.get("id"): c for c in await invio.get_customers()}
+                paid_now = {p["invoiceNumber"] for p in paid_invoices}
+                candidates = []
+                for i in raw_invoices:
+                    inv_num = str(i.get("invoiceNumber"))
+                    customer = customers.get(i.get("customerId"))
+                    if i.get("total") is None or not customer:
+                        continue
+                    if i.get("status") not in ("sent", "paid", "complete"):
+                        continue
+                    candidates.append(
+                        {
+                            "id": i.get("id"),
+                            "number": inv_num,
+                            "total": float(i["total"]),
+                            "issue_date": i.get("issueDate") or "",
+                            "customer": customer,
+                            "open": i.get("status") == "sent"
+                            and inv_num not in payments
+                            and inv_num not in paid_now,
+                        }
+                    )
+                matches, ambiguous = match_by_customer(candidates, unassigned)
+                for invoice, payment, how in matches:
+                    result = evaluate_payments([payment], invoice["total"])
+                    await mark_paid(invoice["id"], invoice["number"], result, how)
+                for invoice in ambiguous:
+                    problems.append(
+                        f"{invoice['number']}: more than one payment or invoice "
+                        "fits by name or email, please check"
+                    )
+                    if invoice["number"] not in _ambiguous_notified:
+                        _ambiguous_notified.add(invoice["number"])
+                        await _notify(
+                            f"Please check: {invoice['number']}",
+                            "A payment without invoice number fits this "
+                            "invoice by name or email, but not unambiguously "
+                            "(several payments or invoices). It stays open.",
+                            ["warning"],
+                            3,
+                        )
 
     global _last_check
     _last_check = datetime.now(timezone.utc).isoformat()
