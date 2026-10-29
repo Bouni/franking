@@ -34,8 +34,8 @@ _lock = asyncio.Lock()
 # approval request to the phone.
 _sparkasse_paused = False
 
-# Goes up whenever invoices get marked as paid, open pages poll it and reload
-# the invoice list when it changed
+# Goes up whenever invoices get marked as paid or a parcel's tracking status
+# changes (tracking.py), open pages poll it and reload the invoice list
 _changes = 0
 _last_check: str | None = None
 

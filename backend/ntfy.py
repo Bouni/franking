@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 
@@ -20,7 +21,12 @@ async def send_notification(
     headers = {"Priority": str(priority)}
 
     if title:
-        headers["Title"] = title
+        # Headers are ASCII only, ntfy decodes RFC 2047 encoded titles
+        headers["Title"] = (
+            title
+            if title.isascii()
+            else f"=?UTF-8?B?{base64.b64encode(title.encode()).decode()}?="
+        )
     if tags:
         headers["Tags"] = ",".join(tags)
     if NTFY_TOKEN:

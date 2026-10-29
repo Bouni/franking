@@ -5,6 +5,7 @@ import paypalIcon from "@/assets/PayPal.svg";
 import sparkasseIcon from "@/assets/Sparkasse.svg";
 import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceItems from "@/components/InvoiceItems.vue";
+import TrackingStatus from "@/components/TrackingStatus.vue";
 import {
   formatDate,
   formatPrice,
@@ -99,6 +100,8 @@ const showItems = computed(() => wide.value || expanded.value);
             >
               {{ invoice.customer.email }}
             </a>
+
+            <TrackingStatus class="mt-2" :label="invoice.label" />
           </div>
 
           <div :class="wide ? 'text-start' : 'text-end'">

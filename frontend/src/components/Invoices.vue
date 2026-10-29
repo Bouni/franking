@@ -135,18 +135,28 @@
         </template>
 
         <template #item.status="{ item }">
-          <v-chip :color="statusColor(item.status)" size="small" variant="flat">
-            {{ item.status }}
-            <template v-if="paymentMethod(item)" #append>
-              <v-img
-                class="ml-2"
-                :src="
-                  paymentMethod(item) === 'PayPal' ? paypalIcon : sparkasseIcon
-                "
-                width="16"
-              />
-            </template>
-          </v-chip>
+          <div class="d-flex flex-column align-center ga-1 py-2 cell-status">
+            <v-chip
+              :color="statusColor(item.status)"
+              size="small"
+              variant="flat"
+            >
+              {{ item.status }}
+              <template v-if="paymentMethod(item)" #append>
+                <v-img
+                  class="ml-2"
+                  :src="
+                    paymentMethod(item) === 'PayPal'
+                      ? paypalIcon
+                      : sparkasseIcon
+                  "
+                  width="16"
+                />
+              </template>
+            </v-chip>
+
+            <TrackingStatus :label="item.label" />
+          </div>
         </template>
 
         <template #item.subtotal="{ value }">
@@ -458,6 +468,10 @@ onUnmounted(stopPaymentWatch);
 
 .item-description {
   overflow-wrap: anywhere;
+}
+
+.cell-status {
+  max-width: 220px;
 }
 
 .cell-customer {
