@@ -307,6 +307,12 @@ class Sendcloud:
             "tracking_url": p.get("tracking_url"),
         }
 
+    async def tracking(self, tracking_number: str) -> dict:
+        """Tracking of a parcel: its events, newest first, and details like
+        the expected delivery date"""
+        data = await self._get(f"/parcels/tracking/{tracking_number}")
+        return data.get("data", data)
+
     async def cancel(self, shipment_id: str) -> dict:
         """Returns {"status": "cancelled" | "queued", "message": ...}"""
         data = await self._post(f"/shipments/{shipment_id}/cancel")

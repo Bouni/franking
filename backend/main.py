@@ -22,6 +22,7 @@ from models import Address
 from ntfy import send_notification
 import payments
 from payments import payment_check_loop, run_payment_check
+from tracking import tracking_check_loop
 from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
 from sendcloud import (
     Sendcloud,
@@ -45,9 +46,13 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(payment_check_loop())
+    tasks = [
+        asyncio.create_task(payment_check_loop()),
+        asyncio.create_task(tracking_check_loop()),
+    ]
     yield
-    task.cancel()
+    for task in tasks:
+        task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
