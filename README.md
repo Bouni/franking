@@ -10,6 +10,7 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
   - DHL Warenpost International Premium (with tracking) for international shipments
   - the default method can be overridden per invoice
   - the tracking link is emailed to the customer, the text is editable in the Settings tab (`{tracking_link}` marks where the link goes)
+  - the shipment status is checked every 5 minutes (`TRACKING_CHECK_INTERVAL`), shown in the invoice list and sent as ntfy notification when it changes
 - the texts of the invoice and tracking emails are editable in the Settings tab, with placeholders like `{name}` and `{invoice_number}`
 - print the DHL labels on a Brother QL-1110NWB (DK-11247, 103x164mm)
 - print the invoice on paper
