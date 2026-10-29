@@ -101,7 +101,11 @@ const showItems = computed(() => wide.value || expanded.value);
               {{ invoice.customer.email }}
             </a>
 
-            <TrackingStatus class="mt-2" :label="invoice.label" />
+            <TrackingStatus
+              class="mt-2"
+              :invoice-number="invoice.invoiceNumber"
+              :label="invoice.label"
+            />
           </div>
 
           <div :class="wide ? 'text-start' : 'text-end'">

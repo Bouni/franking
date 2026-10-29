@@ -422,6 +422,56 @@ async def print_shipping(data: dict):
     return JSONResponse({"success": False, "msg": "Printing failed"})
 
 
+@app.get("/api/shipping/tracking/{invoice_number}")
+async def shipping_tracking(invoice_number: str):
+    """Full tracking history of a parcel, newest event first, for the timeline"""
+    try:
+        label_file(invoice_number, ".png")
+    except ValueError:
+        return JSONResponse(
+            {"success": False, "msg": "Invalid invoice number"}, status_code=400
+        )
+    meta = label_info(invoice_number)
+    if not meta or not meta.get("tracking_number"):
+        return JSONResponse(
+            {"success": False, "msg": f"No tracked parcel for {invoice_number}"},
+            status_code=404,
+        )
+    try:
+        async with Sendcloud() as sc:
+            tracking = await sc.tracking(meta["tracking_number"])
+    except SendcloudError as e:
+        return JSONResponse({"success": False, "msg": e.user_message}, status_code=502)
+    events = sorted(
+        tracking.get("events") or [],
+        key=lambda e: e.get("event_at") or "",
+        reverse=True,
+    )
+    return {
+        "success": True,
+        "tracking_number": meta["tracking_number"],
+        "tracking_url": meta.get("tracking_url"),
+        "expected_delivery_date": (tracking.get("details") or {}).get(
+            "expected_delivery_date"
+        ),
+        "events": [
+            {
+                k: e.get(k)
+                for k in (
+                    "event_at",
+                    "event_type",
+                    "phase",
+                    "sub_status",
+                    "exception",
+                    "status_type",
+                    "description",
+                )
+            }
+            for e in events
+        ],
+    }
+
+
 @app.post("/api/shipping/cancel")
 async def cancel_shipping(data: dict):
     invoice_number = data.get("invoice_number")

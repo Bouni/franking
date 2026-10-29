@@ -155,7 +155,10 @@
               </template>
             </v-chip>
 
-            <TrackingStatus :label="item.label" />
+            <TrackingStatus
+              :invoice-number="item.invoiceNumber"
+              :label="item.label"
+            />
           </div>
         </template>
 
