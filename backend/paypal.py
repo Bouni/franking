@@ -45,29 +45,29 @@ class PayPal:
         return ""
 
     def filter_transactions(self, transactions):
+        """Completed transactions with an invoice number in the note, and
+        incoming payments without one, which the payment check tries to match
+        by email or name"""
         transaction_data = []
         for t in transactions:
             info = t.get("transaction_info", {})
             # S = completed, pending (P), denied (D) and reversed (V) don't count
             if info.get("transaction_status") != "S":
                 continue
-            if "INV" in info.get("transaction_note", ""):
-                transaction_data.append(
-                    {
-                        "invoice": self.get_invoice_number(
-                            t.get("transaction_info", {}).get("transaction_note", "")
-                        ),
-                        "name": t.get("payer_info", {})
-                        .get("payer_name", {})
-                        .get("alternate_full_name", ""),
-                        "date": t.get("transaction_info", {}).get(
-                            "transaction_updated_date", ""
-                        ),
-                        "amount": t.get("transaction_info", {})
-                        .get("transaction_amount", {})
-                        .get("value", 0.0),
-                    }
-                )
+            note = info.get("transaction_note", "")
+            amount = info.get("transaction_amount", {}).get("value", 0.0)
+            if "INV" not in note and float(amount or 0) <= 0:
+                continue
+            payer = t.get("payer_info", {})
+            transaction_data.append(
+                {
+                    "invoice": self.get_invoice_number(note),
+                    "name": payer.get("payer_name", {}).get("alternate_full_name", ""),
+                    "email": payer.get("email_address", ""),
+                    "date": info.get("transaction_updated_date", ""),
+                    "amount": amount,
+                }
+            )
         return transaction_data
 
 
