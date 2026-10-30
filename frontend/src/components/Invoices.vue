@@ -137,11 +137,11 @@
         <template #item.status="{ item }">
           <div class="d-flex flex-column align-center ga-1 py-2 cell-status">
             <v-chip
-              :color="statusColor(item.status)"
+              :color="statusColor(displayStatus(item))"
               size="small"
               variant="flat"
             >
-              {{ item.status }}
+              {{ displayStatus(item) }}
               <template v-if="paymentMethod(item)" #append>
                 <v-img
                   class="ml-2"
@@ -307,6 +307,7 @@ import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceCard from "@/components/InvoiceCard.vue";
 import SendcloudOutstanding from "@/components/SendcloudOutstanding.vue";
 import {
+  displayStatus,
   formatDate,
   formatPrice,
   hasShipping,
@@ -362,7 +363,7 @@ function confirmSend() {
   }
 }
 
-const selectedStates = ref<string[]>(["draft", "sent", "paid"]);
+const selectedStates = ref<string[]>(["draft", "sent", "paid", "shipped"]);
 const search = ref<string | null>("");
 const page = ref(1);
 
@@ -371,8 +372,9 @@ const statusCounts = computed(() => {
     Object.keys(statusColors).map((status) => [status, 0]),
   );
   for (const item of invoices.value) {
-    if (item.status in counts) {
-      counts[item.status]++;
+    const status = displayStatus(item);
+    if (status in counts) {
+      counts[status]++;
     }
   }
   return counts;
@@ -382,7 +384,7 @@ const filteredInvoices = computed(() => {
   const term = (search.value ?? "").trim().toLowerCase();
   return invoices.value.filter(
     (item) =>
-      selectedStates.value.includes(item.status) &&
+      selectedStates.value.includes(displayStatus(item)) &&
       (!term ||
         [
           item.invoiceNumber,
@@ -403,7 +405,13 @@ const headers = [
   { title: "Invoice", key: "invoiceNumber", align: "start" },
   { title: "Customer", key: "customer.name", align: "start" },
   { title: "Address", key: "customer.city", align: "start" },
-  { title: "Status", key: "status", align: "center" },
+  {
+    title: "Status",
+    key: "status",
+    align: "center",
+    // Sort by the shown status, which includes "shipped"
+    value: (item: any) => displayStatus(item),
+  },
   { title: "Sum", key: "subtotal", align: "end" },
   { title: "Items", key: "items", align: "start", sortable: false },
   { title: "Actions", key: "actions", align: "center", sortable: false },
