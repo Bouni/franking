@@ -154,7 +154,11 @@
                 />
               </template>
             </v-chip>
+          </div>
+        </template>
 
+        <template #item.shipping="{ item }">
+          <div class="py-2 cell-shipping">
             <TrackingStatus
               :invoice-number="item.invoiceNumber"
               :label="item.label"
@@ -413,6 +417,13 @@ const headers = [
     // Sort by the shown status, which includes "shipped"
     value: (item: any) => displayStatus(item),
   },
+  {
+    title: "Shipping",
+    key: "shipping",
+    align: "start",
+    // Sort by the latest tracking event, invoices without tracking come first
+    value: (item: any) => item.label?.tracking?.description ?? "",
+  },
   { title: "Sum", key: "subtotal", align: "end" },
   { title: "Items", key: "items", align: "start", sortable: false },
   { title: "Actions", key: "actions", align: "center", sortable: false },
@@ -483,6 +494,10 @@ onUnmounted(stopPaymentWatch);
 }
 
 .cell-status {
+  max-width: 220px;
+}
+
+.cell-shipping {
   max-width: 220px;
 }
 
