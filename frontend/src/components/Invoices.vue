@@ -306,6 +306,7 @@ import sparkasseIcon from "@/assets/Sparkasse.svg";
 import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceCard from "@/components/InvoiceCard.vue";
 import SendcloudOutstanding from "@/components/SendcloudOutstanding.vue";
+import TrackingStatus from "@/components/TrackingStatus.vue";
 import {
   displayStatus,
   formatDate,
