@@ -135,7 +135,9 @@
         </template>
 
         <template #item.status="{ item }">
-          <div class="d-flex flex-column align-center ga-1 py-2 cell-status">
+          <div
+            class="d-flex flex-column align-center ga-1 py-2 mx-auto cell-status"
+          >
             <v-chip
               :color="statusColor(displayStatus(item))"
               size="small"
@@ -158,7 +160,7 @@
         </template>
 
         <template #item.shipping="{ item }">
-          <div class="py-2 cell-shipping">
+          <div class="d-flex justify-center py-2 mx-auto cell-shipping">
             <TrackingStatus
               :invoice-number="item.invoiceNumber"
               :label="item.label"
@@ -420,7 +422,7 @@ const headers = [
   {
     title: "Shipping",
     key: "shipping",
-    align: "start",
+    align: "center",
     // Sort by the latest tracking event, invoices without tracking come first
     value: (item: any) => item.label?.tracking?.description ?? "",
   },
