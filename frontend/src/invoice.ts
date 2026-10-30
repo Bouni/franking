@@ -2,10 +2,12 @@
 
 // colors from https://coolors.co/palette/ff595e-ffca3a-8ac926-1982c4-6a4c93
 export const statusColors = {
-  complete: "#7209b7",
   draft: "#1982c4",
   sent: "#ffca3a",
   paid: "#8ac926",
+  // Not an Invio status, see displayStatus
+  shipped: "#00918e",
+  complete: "#7209b7",
   voided: "#8da9c4",
 } as const;
 
@@ -13,6 +15,33 @@ export type InvoiceStatus = keyof typeof statusColors;
 
 export function statusColor(status: string) {
   return statusColors[status as InvoiceStatus];
+}
+
+// Tracking phases after which a parcel doesn't move any more
+const finalTrackingPhases = new Set([
+  "delivered",
+  "cancelled",
+  "returned",
+  "returned_to_sender",
+]);
+
+// The tracking check stops after 60 days, an older status is not current
+const TRACKING_MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
+
+// "shipped" is not an Invio status: a complete invoice whose Sendcloud
+// parcel hasn't arrived yet. Without tracking (Internetmarke, labels from
+// before the tracking check, sent by hand) it stays "complete".
+export function displayStatus(invoice: any): string {
+  const tracking = invoice.label?.tracking;
+  if (
+    invoice.status === "complete" &&
+    tracking &&
+    !finalTrackingPhases.has(tracking.phase) &&
+    Date.now() - new Date(tracking.event_at).getTime() < TRACKING_MAX_AGE_MS
+  ) {
+    return "shipped";
+  }
+  return invoice.status;
 }
 
 export function formatPrice(value: number) {

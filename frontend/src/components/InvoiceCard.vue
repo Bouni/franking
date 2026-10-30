@@ -7,6 +7,7 @@ import InvoiceActions from "@/components/InvoiceActions.vue";
 import InvoiceItems from "@/components/InvoiceItems.vue";
 import TrackingStatus from "@/components/TrackingStatus.vue";
 import {
+  displayStatus,
   formatDate,
   formatPrice,
   hasShipping,
@@ -31,7 +32,7 @@ const showItems = computed(() => wide.value || expanded.value);
 <template>
   <v-card
     class="invoice-card h-100 d-flex flex-column"
-    :style="{ '--status-color': statusColor(invoice.status) }"
+    :style="{ '--status-color': statusColor(displayStatus(invoice)) }"
     variant="flat"
   >
     <div class="card-body" :class="{ wide }">
@@ -44,11 +45,11 @@ const showItems = computed(() => wide.value || expanded.value);
 
         <template #append>
           <v-chip
-            :color="statusColor(invoice.status)"
+            :color="statusColor(displayStatus(invoice))"
             size="small"
             variant="flat"
           >
-            {{ invoice.status }}
+            {{ displayStatus(invoice) }}
             <template v-if="paymentMethod(invoice)" #append>
               <v-img
                 class="ml-2"
