@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+import db
 import order
 import settings
 import stock
@@ -47,6 +48,7 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db.migrate()
     settings.migrate()
     tasks = [
         asyncio.create_task(payment_check_loop()),
