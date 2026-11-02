@@ -58,8 +58,8 @@ def _open_parcels() -> list[tuple[Path, dict]]:
     cutoff = time.time() - MAX_AGE_DAYS * 86400
     for meta_file in LABEL_DIR.glob("*.json"):
         label_png = meta_file.with_suffix(".png")
-        # Only labels: not settings.json, not cancelled ones (renamed to
-        # INV-….cancelled.json / .png)
+        # Only labels, not cancelled ones (renamed to INV-….cancelled.json /
+        # .png)
         if meta_file.name.endswith(".cancelled.json") or not label_png.is_file():
             continue
         if label_png.stat().st_mtime < cutoff:

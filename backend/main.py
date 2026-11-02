@@ -47,6 +47,7 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings.migrate()
     tasks = [
         asyncio.create_task(payment_check_loop()),
         asyncio.create_task(tracking_check_loop()),
@@ -211,7 +212,7 @@ def open_label_costs(since: datetime | None) -> float:
     """Prices of the labels Sendcloud hasn't invoiced yet"""
     total = 0.0
     for f in Path(LABEL_DIR).glob("*.json"):
-        # Only labels, not settings.json or cancelled labels
+        # Only labels, not cancelled ones
         if f.name.endswith(".cancelled.json") or not f.with_suffix(".png").is_file():
             continue
         meta = json.loads(f.read_text())

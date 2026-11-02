@@ -1,7 +1,6 @@
-"""Stock of the goods, in the SQLite database stock.db next to the settings
-(persistent volume). Only products with a stock entry are tracked,
-everything else is unlimited, so stock tracking starts per product with its
-first booking.
+"""Stock of the goods, in the SQLite database (see db.py). Only products with
+a stock entry are tracked, everything else is unlimited, so stock tracking
+starts per product with its first booking.
 
 Stock goes down when an order is placed in the order form, and when an
 invoice created in Invio leaves draft (background check). It goes back up
@@ -10,13 +9,11 @@ when such an invoice gets voided."""
 import asyncio
 import logging
 import os
-import sqlite3
-from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
 
 from dotenv import load_dotenv
 
+import db
 import payments
 from invio import Invio
 from ntfy import send_notification
@@ -24,14 +21,6 @@ from ntfy import send_notification
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", default="False").lower() in ("true", "1", "t")
-
-# An empty STOCK_DB (as in .env.example) means the default
-STOCK_DB = Path(
-    os.getenv("STOCK_DB")
-    or os.path.join(
-        os.getenv("LABEL_PATH", default="/opt/docker/invio/labels"), "stock.db"
-    )
-)
 
 # Off in DEBUG, a dev instance would book the real invoices into its stock
 STOCK_CHECK_INTERVAL = int(
@@ -97,18 +86,8 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-@contextmanager
 def _db():
-    """Connection with one transaction: committed at the end, rolled back on
-    an exception"""
-    con = sqlite3.connect(STOCK_DB)
-    con.row_factory = sqlite3.Row
-    try:
-        con.executescript(SCHEMA)
-        with con:
-            yield con
-    finally:
-        con.close()
+    return db.connect(SCHEMA)
 
 
 def levels() -> dict[str, int]:
