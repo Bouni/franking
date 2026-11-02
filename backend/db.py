@@ -19,9 +19,13 @@ DB_PATH = Path(os.getenv("FRANKING_DB") or os.path.join(LABEL_PATH, "franking.db
 # The database used to be stock.db, it only held the stock back then
 LEGACY_DB_PATH = Path(LABEL_PATH, "stock.db")
 
-if LEGACY_DB_PATH.is_file() and not DB_PATH.exists():
-    LEGACY_DB_PATH.rename(DB_PATH)
-    logging.info(f"Renamed {LEGACY_DB_PATH} to {DB_PATH}")
+
+def migrate():
+    """Rename the old stock.db. Called on startup and not on import, logging
+    before main.py configured it would hide all info messages"""
+    if LEGACY_DB_PATH.is_file() and not DB_PATH.exists():
+        LEGACY_DB_PATH.rename(DB_PATH)
+        logging.info(f"Renamed {LEGACY_DB_PATH} to {DB_PATH}")
 
 
 @contextmanager
