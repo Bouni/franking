@@ -9,6 +9,8 @@ export interface Product {
   category?: string;
   // Weight per piece in grams, for the shipping price
   weightG?: number;
+  // Pieces in stock, null when the stock isn't tracked (unlimited)
+  stock?: number | null;
 }
 
 export interface Region {

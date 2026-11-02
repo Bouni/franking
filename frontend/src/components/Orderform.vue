@@ -96,7 +96,10 @@
                 <v-col v-for="item in items" :key="item.id" cols="12" sm="6">
                   <v-card
                     class="product h-100"
-                    :class="{ 'product--selected': item.quantity > 0 }"
+                    :class="{
+                      'product--selected': item.quantity > 0,
+                      'product--soldout': item.soldOut,
+                    }"
                     rounded="lg"
                     variant="outlined"
                   >
@@ -114,6 +117,26 @@
                       <v-card-subtitle>
                         {{ formatPrice(item.unitPrice) }} each
                       </v-card-subtitle>
+
+                      <div
+                        v-if="item.stock !== null && item.stock !== undefined"
+                        class="text-caption mt-1"
+                        :class="item.soldOut ? 'text-error' : 'text-success'"
+                      >
+                        <v-icon
+                          :icon="
+                            item.soldOut
+                              ? 'mdi-close-circle'
+                              : 'mdi-check-circle'
+                          "
+                          size="small"
+                        />
+                        {{
+                          item.soldOut
+                            ? "Out of stock"
+                            : `${item.stock} available`
+                        }}
+                      </div>
                     </v-card-item>
 
                     <v-card-actions class="px-4 pb-4">
@@ -121,9 +144,10 @@
                         v-model="quantities[item.id]"
                         control-variant="split"
                         density="compact"
+                        :disabled="item.soldOut"
                         hide-details
                         inset
-                        :max="99"
+                        :max="item.maxQuantity"
                         :min="0"
                         style="max-width: 160px"
                         variant="outlined"
@@ -602,6 +626,9 @@ const items = computed(() =>
       ...p,
       icon: iconFor(p.name),
       quantity: quantities.value[p.id] ?? 0,
+      // Products without tracked stock are unlimited
+      soldOut: p.stock !== null && p.stock !== undefined && p.stock <= 0,
+      maxQuantity: Math.min(99, Math.max(0, p.stock ?? 99)),
     })),
 );
 
@@ -622,6 +649,13 @@ watch(
   (products) => {
     for (const p of products) {
       quantities.value[p.id] ??= 0;
+      // The stock may have gone down since the quantity was chosen
+      if (p.stock !== null && p.stock !== undefined) {
+        quantities.value[p.id] = Math.min(
+          quantities.value[p.id] ?? 0,
+          Math.max(0, p.stock),
+        );
+      }
     }
   },
   { immediate: true },
@@ -728,7 +762,10 @@ async function handleSubmit() {
     })),
   });
   submitting.value = false;
-  if (!submitError.value) {
+  if (submitError.value) {
+    // E.g. sold out meanwhile, show the current stock
+    orderStore.fetchProducts();
+  } else {
     submitted.value = true;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -775,6 +812,10 @@ onMounted(() => {
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
+}
+
+.product--soldout {
+  opacity: 0.6;
 }
 
 .product--selected {
