@@ -18,7 +18,9 @@ export interface LoadingState {
     | "cancelLabel"
     | "updatePayments"
     | "fetchSettings"
-    | "saveSettings";
+    | "saveSettings"
+    | "fetchStock"
+    | "bookStock";
 }
 
 export interface Settings {
@@ -29,6 +31,28 @@ export interface Settings {
   tracking_email_body: string;
   invoice_placeholders?: Record<string, string>;
   tracking_placeholders?: Record<string, string>;
+}
+
+export interface StockProduct {
+  id: string;
+  name: string;
+  // null: not tracked, unlimited
+  stock: number | null;
+}
+
+export interface StockEntry {
+  at: string;
+  product: string;
+  change: number;
+  quantity: number | null;
+  reason: string;
+  invoice: string | null;
+  note: string;
+}
+
+export interface Stock {
+  products: StockProduct[];
+  history: StockEntry[];
 }
 
 export interface InvoiceEmail {
@@ -49,6 +73,7 @@ export const useAppStore = defineStore("app", () => {
   const invoices = ref<any[]>([]);
   const isLoading = ref<LoadingState | null>(null);
   const settings = ref<Settings | null>(null);
+  const stock = ref<Stock | null>(null);
 
   // Invio's invoice data has no customer and label, keep the ones we have
   function updateInvoice(invoice_data: any) {
@@ -412,6 +437,52 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
+  async function fetchStock() {
+    isLoading.value = { id: "", action: "fetchStock" };
+    try {
+      const response = await api.get("/stock");
+      stock.value = response.data;
+    } catch (error: any) {
+      showToast(
+        `Error fetching stock: ${error.message || "Error fetching stock"}`,
+        "#ff595e",
+        10,
+      );
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
+  // kind "receive" books in new goods, "correct" sets the counted stock
+  // (quantity null stops tracking the product)
+  async function bookStock(
+    kind: "receive" | "correct",
+    productId: string,
+    quantity: number | null,
+    note: string,
+  ) {
+    isLoading.value = { id: productId, action: "bookStock" };
+    try {
+      const response = await api.post(`/stock/${kind}`, {
+        productId,
+        quantity,
+        note,
+      });
+      stock.value = response.data;
+      showToast("Stock updated!", "#8ac926", 3);
+      return true;
+    } catch (error: any) {
+      showToast(
+        `Error updating stock: ${error.response?.data?.msg || error.message}`,
+        "#ff595e",
+        10,
+      );
+      return false;
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
   async function fetchSettings() {
     isLoading.value = { id: "", action: "fetchSettings" };
 
@@ -448,6 +519,9 @@ export const useAppStore = defineStore("app", () => {
   }
 
   return {
+    stock,
+    fetchStock,
+    bookStock,
     sendcloudOutstanding,
     startPaymentWatch,
     stopPaymentWatch,

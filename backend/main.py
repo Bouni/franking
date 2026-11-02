@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 import order
 import settings
+import stock
 from invio import Invio, InvioDB
 from mail import Mail
 from models import Address
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     tasks = [
         asyncio.create_task(payment_check_loop()),
         asyncio.create_task(tracking_check_loop()),
+        asyncio.create_task(stock.stock_check_loop()),
     ]
     yield
     for task in tasks:
@@ -508,14 +510,89 @@ async def cancel_shipping(data: dict):
     return JSONResponse({"success": True, "msg": msg})
 
 
+async def _goods() -> dict:
+    """Active goods from Invio, the products stock can be kept for"""
+    async with await Invio.create() as invio:
+        products = await invio.get_products()
+    return {
+        p["id"]: p
+        for p in products
+        if p.get("category") == "goods" and p.get("isActive", True)
+    }
+
+
+def _stock_response(goods: dict) -> dict:
+    levels = stock.levels()
+    return {
+        "products": [
+            # stock None: not tracked, unlimited
+            {"id": p["id"], "name": p.get("name"), "stock": levels.get(p["id"])}
+            for p in goods.values()
+        ],
+        "history": stock.history(200),
+    }
+
+
+@app.get("/api/stock")
+async def get_stock():
+    return _stock_response(await _goods())
+
+
+def _stock_request(data: dict, goods: dict, allow_none: bool) -> tuple:
+    product = goods.get(data.get("productId"))
+    if product is None:
+        raise stock.StockError("Unknown product")
+    quantity = data.get("quantity")
+    if quantity is None and allow_none:
+        return product, None, str(data.get("note") or "")[:200]
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        raise stock.StockError("Invalid quantity") from None
+    return product, quantity, str(data.get("note") or "")[:200]
+
+
+@app.post("/api/stock/receive")
+async def stock_receive(data: dict):
+    """Book in newly arrived goods"""
+    goods = await _goods()
+    try:
+        product, quantity, note = _stock_request(data, goods, allow_none=False)
+        async with stock.lock:
+            stock.receive(product["id"], product["name"], quantity, note)
+    except stock.StockError as e:
+        return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
+    payments.mark_changed()
+    return _stock_response(goods)
+
+
+@app.post("/api/stock/correct")
+async def stock_correct(data: dict):
+    """Set the stock after counting, quantity null stops tracking"""
+    goods = await _goods()
+    try:
+        product, quantity, note = _stock_request(data, goods, allow_none=True)
+        async with stock.lock:
+            stock.correct(product["id"], product["name"], quantity, note)
+    except stock.StockError as e:
+        return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
+    payments.mark_changed()
+    return _stock_response(goods)
+
+
 @app.get("/api/order/products")
 async def get_products():
     # Public (order.bouni.de): only active products and only the fields the
     # order form needs
     async with await Invio.create() as invio:
         products = await invio.get_products()
+    levels = stock.levels()
     return [
-        {k: p.get(k) for k in ("id", "name", "unitPrice", "category", "weightG")}
+        {
+            **{k: p.get(k) for k in ("id", "name", "unitPrice", "category", "weightG")},
+            # None: stock not tracked, unlimited
+            "stock": levels.get(p.get("id")),
+        }
         for p in products
         if p.get("isActive", True)
     ]
@@ -598,16 +675,29 @@ async def submit_order(data: dict, request: Request):
         total = sum(i["unitPrice"] * i["quantity"] for i in items)
         summary = "\n".join(f"{i['quantity']} x {i['description']}" for i in items)
 
-        if DEBUG:
-            logging.info(f"DEBUG active, no invoice created: {customer_data} {items}")
-            return JSONResponse({"success": True, "debug": True, "total": total})
+        # The lock keeps two orders from selling the same last piece
+        async with stock.lock:
+            try:
+                stock.check_available(items)
+            except stock.StockError as e:
+                return JSONResponse(
+                    {"success": False, "msg": e.user_message}, status_code=409
+                )
 
-        customer = order.find_customer(await invio.get_customers(), customer_data)
-        if customer is None:
-            customer = await invio.create_customer(customer_data)
-        invoice = await invio.create_invoice(
-            {"customerId": customer["id"], "status": "draft", "items": items}
-        )
+            if DEBUG:
+                logging.info(
+                    f"DEBUG active, no invoice created: {customer_data} {items}"
+                )
+                return JSONResponse({"success": True, "debug": True, "total": total})
+
+            customer = order.find_customer(await invio.get_customers(), customer_data)
+            if customer is None:
+                customer = await invio.create_customer(customer_data)
+            invoice = await invio.create_invoice(
+                {"customerId": customer["id"], "status": "draft", "items": items}
+            )
+            stock_before = stock.book_order(invoice, items)
+        await stock.notify_out_of_stock(stock_before)
 
     logging.info(f"Order {invoice.get('invoiceNumber')} from {customer_data['email']}")
     try:
