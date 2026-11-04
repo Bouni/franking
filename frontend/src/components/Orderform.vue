@@ -538,30 +538,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <!-- T-Online rejects a lot of mails, warn about invoices getting lost -->
-    <v-dialog v-model="tOnlineNotice" max-width="560">
-      <v-card prepend-icon="mdi-email-alert" title="T-Online email address">
-        <v-card-text>
-          <p>
-            T-Online sucks. Their mail servers reject or silently drop a lot of
-            emails, so my invoice will most likely fail to reach
-            <strong>{{ order.email }}</strong
-            >.
-          </p>
-
-          <p class="mt-4">Please enter another email address if possible.</p>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-
-          <v-btn color="primary" variant="flat" @click="tOnlineNotice = false">
-            Got it
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -742,21 +718,6 @@ watch(
   () => order.value.country,
   (country) => {
     if (country === "US") usNotice.value = true;
-  },
-);
-
-// Invoices to T-Online addresses often get lost, ask for another address
-const tOnlineNotice = ref(false);
-
-function isTOnline(email: string) {
-  return /@t-online\.de$/i.test(email.trim());
-}
-
-watch(
-  () => order.value.email,
-  (email, previous) => {
-    // Only once when the address becomes a T-Online one, not on every keystroke
-    if (isTOnline(email) && !isTOnline(previous)) tOnlineNotice.value = true;
   },
 );
 
