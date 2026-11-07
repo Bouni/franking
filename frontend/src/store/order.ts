@@ -38,6 +38,17 @@ export const useOrderStore = defineStore("order", () => {
     }
   }
 
+  // Reload in the background, a failure keeps the list that is shown
+  async function refreshProducts() {
+    try {
+      const response = await api.get("/order/products");
+      products.value = response.data;
+      productsError.value = false;
+    } catch {
+      // The next refresh tries again
+    }
+  }
+
   async function fetchShipping(
     country: string,
     goodsG: number,
@@ -81,6 +92,7 @@ export const useOrderStore = defineStore("order", () => {
     products,
     productsError,
     fetchProducts,
+    refreshProducts,
     fetchShipping,
     fetchRegions,
     submitOrder,

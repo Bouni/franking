@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -94,9 +95,20 @@ async def check_payments():
     return await run_payment_check(interactive=True)
 
 
+def frontend_version() -> str | None:
+    """index.html names the hashed assets, so it changes with every new build"""
+    try:
+        return hashlib.sha256(Path("static/index.html").read_bytes()).hexdigest()[:12]
+    except OSError:
+        return None
+
+
+FRONTEND_VERSION = frontend_version()
+
+
 @app.get("/api/payments/status")
 async def payments_status():
-    return payments.status()
+    return {**payments.status(), "frontend": FRONTEND_VERSION}
 
 
 @app.get("/api/invoices/{invoice_id}")
