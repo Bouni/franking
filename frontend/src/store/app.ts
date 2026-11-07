@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import Toastify from "toastify-js";
 import { ref } from "vue";
 import api from "@/plugins/axios";
+import { useOrderStore } from "@/store/order";
 import "toastify-js/src/toastify.css";
 
 export interface LoadingState {
@@ -74,6 +75,7 @@ export const useAppStore = defineStore("app", () => {
   const isLoading = ref<LoadingState | null>(null);
   const settings = ref<Settings | null>(null);
   const stock = ref<Stock | null>(null);
+  const updateAvailable = ref(false);
 
   // Invio's invoice data has no customer and label, keep the ones we have
   function updateInvoice(invoice_data: any) {
@@ -130,11 +132,41 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  // Payments are also checked in the background, poll a change counter and
-  // reload the invoices when it moved. Only while the page is visible.
+  async function refreshStock() {
+    try {
+      const response = await api.get("/stock");
+      stock.value = response.data;
+    } catch {
+      // The next poll tries again
+    }
+  }
+
+  async function refreshOutstanding() {
+    try {
+      const response = await api.get("/sendcloud/outstanding");
+      if (response.data.success) {
+        sendcloudOutstanding.value = {
+          open: response.data.open,
+          unpaid: response.data.unpaid,
+          unpaid_count: response.data.unpaid_count,
+        };
+      }
+    } catch {
+      // The next poll tries again
+    }
+  }
+
+  // Payments, tracking and stock are also checked in the background, poll a
+  // change counter and reload the data when it moved. Not everything moves the
+  // counter (e.g. invoices edited in Invio), so reload everything when the last
+  // full reload is too old as well. Only while the page is visible, so a tab
+  // that was hidden for days catches up as soon as it is looked at.
   const PAYMENT_POLL_MS = 30_000;
+  const FULL_REFRESH_MS = 5 * 60_000;
   let paymentChanges: number | null = null;
   let paymentPoll: ReturnType<typeof setInterval> | null = null;
+  let lastFullRefresh = 0;
+  let frontendVersion: string | null = null;
 
   async function pollPayments() {
     if (document.hidden) {
@@ -142,11 +174,26 @@ export const useAppStore = defineStore("app", () => {
     }
     try {
       const response = await api.get("/payments/status");
-      const changes = response.data.changes;
-      if (paymentChanges !== null && changes !== paymentChanges) {
-        await refreshInvoices();
-      }
+      const { changes, frontend } = response.data;
+      const changed = paymentChanges !== null && changes !== paymentChanges;
+      const stale = Date.now() - lastFullRefresh >= FULL_REFRESH_MS;
       paymentChanges = changes;
+      if (stale) {
+        lastFullRefresh = Date.now();
+      }
+      frontendVersion ??= frontend;
+      if (frontend && frontend !== frontendVersion) {
+        updateAvailable.value = true;
+      }
+      if (changed || stale) {
+        await Promise.all([
+          refreshInvoices(),
+          refreshStock(),
+          useOrderStore().refreshProducts(),
+          // Calls the Sendcloud API, and the counter says nothing about it
+          stale ? refreshOutstanding() : null,
+        ]);
+      }
     } catch {
       // The next poll tries again
     }
@@ -156,6 +203,8 @@ export const useAppStore = defineStore("app", () => {
     if (paymentPoll) {
       return;
     }
+    // The components load their data when they are mounted
+    lastFullRefresh = Date.now();
     pollPayments();
     paymentPoll = setInterval(pollPayments, PAYMENT_POLL_MS);
     document.addEventListener("visibilitychange", pollPayments);
@@ -523,6 +572,7 @@ export const useAppStore = defineStore("app", () => {
     fetchStock,
     bookStock,
     sendcloudOutstanding,
+    updateAvailable,
     startPaymentWatch,
     stopPaymentWatch,
     settings,

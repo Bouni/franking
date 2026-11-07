@@ -37,17 +37,34 @@
             <Settings />
           </v-tabs-window-item>
         </v-tabs-window>
+
+        <!-- Not reloaded automatically, that would drop a half filled form -->
+        <v-snackbar :model-value="updateAvailable" :timeout="-1">
+          A new version of Franking is available
+
+          <template #actions>
+            <v-btn color="primary" variant="text" @click="reload">Reload</v-btn>
+          </template>
+        </v-snackbar>
       </v-container>
     </v-main>
   </v-app>
 </template>
 
 <script lang="ts" setup>
+import { storeToRefs } from "pinia";
 import { ref } from "vue";
 import Invoices from "@/components/Invoices.vue";
 import OrderForm from "@/components/Orderform.vue";
 import Settings from "@/components/Settings.vue";
 import Stock from "@/components/Stock.vue";
+import { useAppStore } from "@/store/app";
+
+const { updateAvailable } = storeToRefs(useAppStore());
 
 const tab = ref("invoices");
+
+function reload() {
+  location.reload();
+}
 </script>
