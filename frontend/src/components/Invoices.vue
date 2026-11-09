@@ -387,20 +387,40 @@ const statusCounts = computed(() => {
   return counts;
 });
 
+// Statuses in the order an invoice goes through them, unknown ones last
+const statusOrder = Object.keys(statusColors);
+
+function statusRank(item: any) {
+  const rank = statusOrder.indexOf(displayStatus(item));
+  return rank === -1 ? statusOrder.length : rank;
+}
+
+// Grouped by status, newest invoice first within each status
+function compareInvoices(a: any, b: any) {
+  return (
+    statusRank(a) - statusRank(b) ||
+    (b.invoiceNumber ?? "").localeCompare(a.invoiceNumber ?? "", undefined, {
+      numeric: true,
+    })
+  );
+}
+
 const filteredInvoices = computed(() => {
   const term = (search.value ?? "").trim().toLowerCase();
-  return invoices.value.filter(
-    (item) =>
-      selectedStates.value.includes(displayStatus(item)) &&
-      (!term ||
-        [
-          item.invoiceNumber,
-          item.customer?.name,
-          item.customer?.contactName,
-          item.customer?.email,
-          item.customer?.city,
-        ].some((value) => value?.toLowerCase().includes(term))),
-  );
+  return invoices.value
+    .filter(
+      (item) =>
+        selectedStates.value.includes(displayStatus(item)) &&
+        (!term ||
+          [
+            item.invoiceNumber,
+            item.customer?.name,
+            item.customer?.contactName,
+            item.customer?.email,
+            item.customer?.city,
+          ].some((value) => value?.toLowerCase().includes(term))),
+    )
+    .toSorted(compareInvoices);
 });
 
 // A changed filter starts again on the first page of cards
@@ -416,8 +436,8 @@ const headers = [
     title: "Status",
     key: "status",
     align: "center",
-    // Sort by the shown status, which includes "shipped"
-    value: (item: any) => displayStatus(item),
+    // Sort by the shown status, which includes "shipped", in workflow order
+    value: (item: any) => statusRank(item),
   },
   {
     title: "Shipping",
