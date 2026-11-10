@@ -21,7 +21,8 @@ export interface LoadingState {
     | "fetchSettings"
     | "saveSettings"
     | "fetchStock"
-    | "bookStock";
+    | "bookStock"
+    | "expectStock";
 }
 
 export interface Settings {
@@ -34,11 +35,20 @@ export interface Settings {
   tracking_placeholders?: Record<string, string>;
 }
 
+export interface ExpectedDelivery {
+  quantity: number;
+  // Date as YYYY-MM-DD
+  due: string | null;
+  note: string;
+}
+
 export interface StockProduct {
   id: string;
   name: string;
   // null: not tracked, unlimited
   stock: number | null;
+  // null: no delivery expected
+  expected: ExpectedDelivery | null;
 }
 
 export interface StockEntry {
@@ -532,6 +542,38 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
+  // A null delivery removes the expected delivery of the product
+  async function expectStock(
+    productId: string,
+    delivery: ExpectedDelivery | null,
+  ) {
+    isLoading.value = { id: productId, action: "expectStock" };
+    try {
+      const response = await api.post("/stock/expect", {
+        productId,
+        quantity: delivery?.quantity ?? null,
+        due: delivery?.due ?? null,
+        note: delivery?.note ?? "",
+      });
+      stock.value = response.data;
+      showToast(
+        delivery ? "Delivery expected!" : "Expected delivery removed!",
+        "#8ac926",
+        3,
+      );
+      return true;
+    } catch (error: any) {
+      showToast(
+        `Error saving the expected delivery: ${error.response?.data?.msg || error.message}`,
+        "#ff595e",
+        10,
+      );
+      return false;
+    } finally {
+      isLoading.value = null;
+    }
+  }
+
   async function fetchSettings() {
     isLoading.value = { id: "", action: "fetchSettings" };
 
@@ -571,6 +613,7 @@ export const useAppStore = defineStore("app", () => {
     stock,
     fetchStock,
     bookStock,
+    expectStock,
     sendcloudOutstanding,
     updateAvailable,
     startPaymentWatch,

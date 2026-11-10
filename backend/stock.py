@@ -4,7 +4,10 @@ starts per product with its first booking.
 
 Stock goes down when an order is placed in the order form, and when an
 invoice created in Invio leaves draft (background check). It goes back up
-when such an invoice gets voided."""
+when such an invoice gets voided.
+
+A product can have an expected delivery, a reminder that more is on the
+way. Booking in goods for the product clears it."""
 
 import asyncio
 import logging
@@ -56,6 +59,13 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     quantity INTEGER NOT NULL,
     PRIMARY KEY (invoice_id, product_id)
 );
+-- Deliveries on the way, one per product, cleared when goods are booked in
+CREATE TABLE IF NOT EXISTS expected (
+    product_id TEXT PRIMARY KEY,
+    quantity INTEGER NOT NULL,
+    due TEXT,
+    note TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     at TEXT NOT NULL,
@@ -97,6 +107,33 @@ def levels() -> dict[str, int]:
             r["product_id"]: r["quantity"]
             for r in con.execute("SELECT product_id, quantity FROM stock")
         }
+
+
+def expected() -> dict[str, dict]:
+    """Expected deliveries per product, due is a date (YYYY-MM-DD) or None"""
+    with _db() as con:
+        return {
+            r["product_id"]: {
+                "quantity": r["quantity"],
+                "due": r["due"],
+                "note": r["note"],
+            }
+            for r in con.execute("SELECT * FROM expected")
+        }
+
+
+def expect(product_id: str, quantity: int | None, due: str | None, note: str = ""):
+    """Set the expected delivery of a product, quantity None removes it"""
+    with _db() as con:
+        if quantity is None:
+            con.execute("DELETE FROM expected WHERE product_id = ?", (product_id,))
+            return
+        if quantity < 1:
+            raise StockError("The quantity must be at least 1")
+        con.execute(
+            "INSERT OR REPLACE INTO expected VALUES (?, ?, ?, ?)",
+            (product_id, quantity, due, note),
+        )
 
 
 def history(limit: int = 200) -> list[dict]:
@@ -147,6 +184,8 @@ def receive(product_id: str, name: str, quantity: int, note: str = ""):
         raise StockError("The quantity must be at least 1")
     with _db() as con:
         _change(con, product_id, name, quantity, "received", note=note)
+        # The expected delivery arrived
+        con.execute("DELETE FROM expected WHERE product_id = ?", (product_id,))
 
 
 def correct(product_id: str, name: str, quantity: int | None, note: str = ""):

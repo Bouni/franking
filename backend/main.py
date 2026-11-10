@@ -5,7 +5,7 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import anyio
@@ -538,10 +538,17 @@ async def _goods() -> dict:
 
 def _stock_response(goods: dict) -> dict:
     levels = stock.levels()
+    expected = stock.expected()
     return {
         "products": [
-            # stock None: not tracked, unlimited
-            {"id": p["id"], "name": p.get("name"), "stock": levels.get(p["id"])}
+            {
+                "id": p["id"],
+                "name": p.get("name"),
+                # None: not tracked, unlimited
+                "stock": levels.get(p["id"]),
+                # None: no delivery expected
+                "expected": expected.get(p["id"]),
+            }
             for p in goods.values()
         ],
         "history": stock.history(200),
@@ -575,6 +582,26 @@ async def stock_receive(data: dict):
         product, quantity, note = _stock_request(data, goods, allow_none=False)
         async with stock.lock:
             stock.receive(product["id"], product["name"], quantity, note)
+    except stock.StockError as e:
+        return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
+    payments.mark_changed()
+    return _stock_response(goods)
+
+
+@app.post("/api/stock/expect")
+async def stock_expect(data: dict):
+    """Set the expected delivery of a product, quantity null removes it"""
+    goods = await _goods()
+    try:
+        product, quantity, note = _stock_request(data, goods, allow_none=True)
+        due = data.get("due") or None
+        if due is not None:
+            try:
+                due = date.fromisoformat(due).isoformat()
+            except (TypeError, ValueError):
+                raise stock.StockError("Invalid date") from None
+        async with stock.lock:
+            stock.expect(product["id"], quantity, due, note)
     except stock.StockError as e:
         return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
     payments.mark_changed()
