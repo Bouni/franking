@@ -6,7 +6,7 @@ import { type StockProduct, useAppStore } from "@/store/app";
 
 const store = useAppStore();
 const { isLoading, stock } = storeToRefs(store);
-const { fetchStock, bookStock } = store;
+const { fetchStock, bookStock, expectStock } = store;
 const { xs } = useDisplay();
 
 onMounted(fetchStock);
@@ -36,6 +36,24 @@ const reasons: Record<string, string> = {
   voided: "Voided, returned",
 };
 
+function formatDate(value: string) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString("de-DE");
+}
+
+// Today as YYYY-MM-DD in local time, to compare with due dates
+function today() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function isOverdue(p: StockProduct) {
+  return !!p.expected?.due && p.expected.due < today();
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("de-DE", {
     dateStyle: "short",
@@ -43,41 +61,67 @@ function formatDateTime(value: string) {
   });
 }
 
-// Dialog for booking in and correcting
+// Dialog for booking in, correcting and expecting a delivery
 const dialog = ref(false);
-const kind = ref<"receive" | "correct">("receive");
+const kind = ref<"receive" | "correct" | "expect">("receive");
 const product = ref<StockProduct | null>(null);
 const quantity = ref<number>(1);
 const tracked = ref(true);
+const due = ref("");
 const note = ref("");
 
-function open(p: StockProduct, k: "receive" | "correct") {
+const dialogLooks = {
+  receive: { icon: "mdi-package-down", title: "Book in goods" },
+  correct: { icon: "mdi-pencil", title: "Correct stock" },
+  expect: { icon: "mdi-truck-delivery", title: "Expected delivery" },
+};
+
+function open(p: StockProduct, k: "receive" | "correct" | "expect") {
   product.value = p;
   kind.value = k;
-  quantity.value = k === "receive" ? 1 : Math.max(0, p.stock ?? 0);
+  // Booking in usually brings the expected delivery
+  quantity.value = {
+    receive: p.expected?.quantity ?? 1,
+    correct: Math.max(0, p.stock ?? 0),
+    expect: p.expected?.quantity ?? 1,
+  }[k];
   tracked.value = true;
-  note.value = "";
+  due.value = (k === "expect" && p.expected?.due) || "";
+  note.value = (k === "expect" && p.expected?.note) || "";
   dialog.value = true;
 }
 
 const valid = computed(() =>
-  kind.value === "receive"
-    ? Number.isInteger(quantity.value) && quantity.value >= 1
-    : !tracked.value ||
-      (Number.isInteger(quantity.value) && quantity.value >= 0),
+  kind.value === "correct"
+    ? !tracked.value ||
+      (Number.isInteger(quantity.value) && quantity.value >= 0)
+    : Number.isInteger(quantity.value) && quantity.value >= 1,
 );
 
 async function save() {
   if (!product.value) {
     return;
   }
-  const ok = await bookStock(
-    kind.value,
-    product.value.id,
-    kind.value === "correct" && !tracked.value ? null : quantity.value,
-    note.value,
-  );
+  const ok =
+    kind.value === "expect"
+      ? await expectStock(product.value.id, {
+          quantity: quantity.value,
+          due: due.value || null,
+          note: note.value,
+        })
+      : await bookStock(
+          kind.value,
+          product.value.id,
+          kind.value === "correct" && !tracked.value ? null : quantity.value,
+          note.value,
+        );
   if (ok) {
+    dialog.value = false;
+  }
+}
+
+async function removeExpected() {
+  if (product.value && (await expectStock(product.value.id, null))) {
     dialog.value = false;
   }
 }
@@ -98,6 +142,21 @@ async function save() {
             :key="p.id"
             :title="p.name"
           >
+            <template v-if="p.expected" #subtitle>
+              <span :class="isOverdue(p) ? 'text-error' : undefined">
+                <v-icon icon="mdi-truck-delivery" size="small" />
+                {{ p.expected.quantity }} expected
+                <template v-if="p.expected.due">
+                  {{ isOverdue(p) ? "since" : "by" }}
+                  {{ formatDate(p.expected.due) }}
+                </template>
+              </span>
+
+              <template v-if="p.expected.note">
+                · {{ p.expected.note }}
+              </template>
+            </template>
+
             <template #prepend>
               <v-chip
                 class="mr-4 stock-chip"
@@ -121,6 +180,19 @@ async function save() {
                   :text="xs ? undefined : 'Book in'"
                   variant="flat"
                   @click="open(p, 'receive')"
+                />
+
+                <v-btn
+                  color="#6a4c93"
+                  :icon="xs ? 'mdi-truck-delivery' : undefined"
+                  :loading="
+                    isLoading?.action === 'expectStock' &&
+                    isLoading?.id === p.id
+                  "
+                  :prepend-icon="xs ? undefined : 'mdi-truck-delivery'"
+                  :text="xs ? undefined : 'Expected'"
+                  :variant="p.expected ? 'flat' : 'outlined'"
+                  @click="open(p, 'expect')"
                 />
 
                 <v-btn
@@ -199,9 +271,9 @@ async function save() {
 
   <v-dialog v-model="dialog" :fullscreen="xs" max-width="460">
     <v-card
-      :prepend-icon="kind === 'receive' ? 'mdi-package-down' : 'mdi-pencil'"
+      :prepend-icon="dialogLooks[kind].icon"
       :subtitle="product?.name"
-      :title="kind === 'receive' ? 'Book in goods' : 'Correct stock'"
+      :title="dialogLooks[kind].title"
     >
       <v-card-text>
         <v-switch
@@ -213,12 +285,18 @@ async function save() {
         />
 
         <v-number-input
-          v-if="kind === 'receive' || tracked"
+          v-if="kind !== 'correct' || tracked"
           v-model="quantity"
           class="mt-2"
           control-variant="split"
-          :label="kind === 'receive' ? 'Arrived pieces' : 'Pieces in stock'"
-          :min="kind === 'receive' ? 1 : 0"
+          :label="
+            {
+              receive: 'Arrived pieces',
+              correct: 'Pieces in stock',
+              expect: 'Expected pieces',
+            }[kind]
+          "
+          :min="kind === 'correct' ? 0 : 1"
         />
 
         <v-alert
@@ -232,21 +310,55 @@ async function save() {
         </v-alert>
 
         <v-text-field
+          v-if="kind === 'expect'"
+          v-model="due"
+          clearable
+          label="Expected on (optional)"
+          type="date"
+        />
+
+        <v-text-field
           v-model="note"
           counter="200"
-          label="Note (optional)"
+          :label="
+            kind === 'expect'
+              ? 'Note, e.g. supplier (optional)'
+              : 'Note (optional)'
+          "
           maxlength="200"
         />
+
+        <v-alert
+          v-if="kind === 'receive' && product?.expected"
+          density="compact"
+          type="info"
+          variant="tonal"
+        >
+          Booking in clears the expected delivery of
+          {{ product.expected.quantity }} pieces.
+        </v-alert>
       </v-card-text>
 
       <v-card-actions>
+        <v-btn
+          v-if="kind === 'expect' && product?.expected"
+          color="error"
+          :disabled="isLoading?.action === 'expectStock'"
+          @click="removeExpected"
+        >
+          Remove
+        </v-btn>
+
         <v-spacer />
         <v-btn @click="dialog = false">Cancel</v-btn>
 
         <v-btn
           color="primary"
           :disabled="!valid"
-          :loading="isLoading?.action === 'bookStock'"
+          :loading="
+            isLoading?.action === 'bookStock' ||
+            isLoading?.action === 'expectStock'
+          "
           variant="flat"
           @click="save"
         >
