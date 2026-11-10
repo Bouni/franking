@@ -137,6 +137,14 @@
                             : `${item.stock} available`
                         }}
                       </div>
+
+                      <div
+                        v-if="item.restock"
+                        class="text-caption text-medium-emphasis"
+                      >
+                        <v-icon icon="mdi-truck-delivery" size="small" />
+                        {{ restockText(item.restock.due) }}
+                      </div>
                     </v-card-item>
 
                     <v-card-actions class="px-4 pb-4">
@@ -617,6 +625,21 @@ function iconFor(name: string) {
   if (n.includes("case")) return "mdi-package-variant-closed";
   if (n.includes("stecker") || n.includes("connector")) return "mdi-connection";
   return "mdi-chip";
+}
+
+// A passed date isn't shown, the delivery is just late
+function restockText(due: string | null) {
+  const date = due ? new Date(`${due}T23:59:59`) : null;
+  if (!date || date < new Date()) {
+    return "More on the way";
+  }
+  // In the customer's own date format
+  const day = date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return `More expected by ${day}`;
 }
 
 const items = computed(() =>

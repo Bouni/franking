@@ -629,11 +629,19 @@ async def get_products():
     async with await Invio.create() as invio:
         products = await invio.get_products()
     levels = stock.levels()
+    expected = stock.expected()
     return [
         {
             **{k: p.get(k) for k in ("id", "name", "unitPrice", "category", "weightG")},
             # None: stock not tracked, unlimited
             "stock": levels.get(p.get("id")),
+            # Only that more is on the way and when, quantity and note
+            # (supplier) are internal. None: nothing expected or not tracked
+            "restock": (
+                {"due": expected[p.get("id")]["due"]}
+                if p.get("id") in expected and p.get("id") in levels
+                else None
+            ),
         }
         for p in products
         if p.get("isActive", True)

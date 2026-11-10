@@ -11,6 +11,8 @@ export interface Product {
   weightG?: number;
   // Pieces in stock, null when the stock isn't tracked (unlimited)
   stock?: number | null;
+  // More is on the way, due is a date (YYYY-MM-DD) or null when unknown
+  restock?: { due: string | null } | null;
 }
 
 export interface Region {
