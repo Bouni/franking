@@ -15,6 +15,10 @@
 
               <v-tab prepend-icon="mdi-warehouse" value="stock">Stock</v-tab>
 
+              <v-tab prepend-icon="mdi-book-open-variant" value="bookkeeping">
+                Bookkeeping
+              </v-tab>
+
               <v-tab prepend-icon="mdi-cog" value="settings">Settings</v-tab>
             </v-tabs>
           </template>
@@ -31,6 +35,10 @@
 
           <v-tabs-window-item value="stock">
             <Stock />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="bookkeeping">
+            <Bookkeeping />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="settings">
@@ -54,6 +62,7 @@
 <script lang="ts" setup>
 import { storeToRefs } from "pinia";
 import { ref } from "vue";
+import Bookkeeping from "@/components/Bookkeeping.vue";
 import Invoices from "@/components/Invoices.vue";
 import OrderForm from "@/components/Orderform.vue";
 import Settings from "@/components/Settings.vue";

@@ -610,6 +610,7 @@ export const useAppStore = defineStore("app", () => {
   }
 
   return {
+    showToast,
     stock,
     fetchStock,
     bookStock,

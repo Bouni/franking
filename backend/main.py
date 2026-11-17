@@ -11,10 +11,11 @@ from pathlib import Path
 import anyio
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+import bookkeeping
 import db
 import order
 import settings
@@ -620,6 +621,90 @@ async def stock_correct(data: dict):
         return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
     payments.mark_changed()
     return _stock_response(goods)
+
+
+def _bookkeeping_error(e: bookkeeping.BookkeepingError) -> JSONResponse:
+    return JSONResponse({"success": False, "msg": e.user_message}, status_code=400)
+
+
+def _year(year: int | None) -> int:
+    if year is None:
+        return date.today().year
+    if not 2000 <= year <= 2100:
+        raise HTTPException(status_code=400, detail="Invalid year")
+    return year
+
+
+@app.get("/api/bookkeeping")
+async def get_bookkeeping(year: int | None = None):
+    return await bookkeeping.overview(_year(year))
+
+
+@app.post("/api/bookkeeping/entries")
+async def create_bookkeeping_entry(data: dict):
+    try:
+        return bookkeeping.create(data)
+    except bookkeeping.BookkeepingError as e:
+        return _bookkeeping_error(e)
+
+
+@app.put("/api/bookkeeping/entries/{entry_id}")
+async def update_bookkeeping_entry(entry_id: int, data: dict):
+    try:
+        return bookkeeping.update(entry_id, data)
+    except bookkeeping.BookkeepingError as e:
+        return _bookkeeping_error(e)
+
+
+@app.delete("/api/bookkeeping/entries/{entry_id}")
+async def delete_bookkeeping_entry(entry_id: int):
+    try:
+        bookkeeping.delete(entry_id)
+    except bookkeeping.BookkeepingError as e:
+        return _bookkeeping_error(e)
+    return {"success": True}
+
+
+@app.post("/api/bookkeeping/entries/{entry_id}/receipt")
+async def upload_bookkeeping_receipt(entry_id: int, file: UploadFile):
+    content = await file.read(bookkeeping.MAX_RECEIPT_BYTES + 1)
+    try:
+        return bookkeeping.attach_receipt(entry_id, file.filename or "", content)
+    except bookkeeping.BookkeepingError as e:
+        return _bookkeeping_error(e)
+
+
+@app.delete("/api/bookkeeping/entries/{entry_id}/receipt")
+async def delete_bookkeeping_receipt(entry_id: int):
+    try:
+        return bookkeeping.remove_receipt(entry_id)
+    except bookkeeping.BookkeepingError as e:
+        return _bookkeeping_error(e)
+
+
+@app.get("/api/bookkeeping/entries/{entry_id}/receipt")
+async def get_bookkeeping_receipt(entry_id: int):
+    found = bookkeeping.receipt(entry_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="No receipt")
+    path, media_type, name = found
+    # Inline, so PDFs and images open in the browser instead of downloading
+    return FileResponse(
+        path, media_type=media_type, filename=name, content_disposition_type="inline"
+    )
+
+
+@app.get("/api/bookkeeping/report")
+async def bookkeeping_report(year: int | None = None, receipts: bool = True):
+    year = _year(year)
+    pdf = await bookkeeping.report(year, receipts)
+    return Response(
+        pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Buchhaltung-{year}.pdf"'
+        },
+    )
 
 
 @app.get("/api/order/products")

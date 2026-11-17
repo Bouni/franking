@@ -6,6 +6,7 @@ A [invio](https://github.com/kittendevv/Invio) sidecar project that allows me to
 - mark invoice as paid
 - public order form (order.bouni.de) that creates a draft invoice in Invio, including shipping costs from Sendcloud rounded up to the next full euro
 - stock of the goods in the Stock tab: book in new goods, correct after counting. Order form orders and sent Invio invoices are subtracted, voided ones returned. The order form shows the available pieces and refuses sold out products
+- bookkeeping in the Bookkeeping tab: paid Invio invoices count as income in the year they were paid, plus manual income and expense entries with uploaded receipts (PDF, PNG, JPEG). A PDF report per year for the tax advisor, optionally with the receipts appended
 - create shipping labels via [Sendcloud](https://www.sendcloud.com/)
   - DHL Kleinpaket for shipments within Germany
   - DHL Warenpost International Premium (with tracking) for international shipments
