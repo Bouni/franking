@@ -11,9 +11,13 @@ dependencies = [
     "brother-ql",
     "fastapi[standard]>=0.128.0",
     "fints>=5.0.0",
+    "fpdf2>=2.9.0",
     "httpx>=0.28.1",
+    "pillow>=13.0.0",
     "pycountry>=24.6.1",
+    "pypdf>=7.1.0",
     "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.32",
 ]
 
 [tool.uv.sources]
