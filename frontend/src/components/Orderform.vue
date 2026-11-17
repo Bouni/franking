@@ -38,6 +38,21 @@
     </v-sheet>
 
     <v-alert
+      class="mb-6"
+      icon="mdi-flask-outline"
+      rounded="lg"
+      title="Intended use"
+      type="warning"
+      variant="tonal"
+    >
+      The BSH Board is intended exclusively for development and research
+      purposes. It is not a finished consumer product and is aimed at users with
+      a background in electronics and software engineering. Please only order if
+      you have the technical knowledge required to set up, operate and integrate
+      the board safely.
+    </v-alert>
+
+    <v-alert
       v-if="submitted"
       class="mb-6"
       icon="mdi-check-circle"
