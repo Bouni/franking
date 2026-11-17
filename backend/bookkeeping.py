@@ -306,6 +306,9 @@ async def invoice_income() -> list[dict]:
         i = json.loads(r["invoice_json"])
         if i.get("status") not in INCOME_STATUSES:
             continue
+        # Free invoices (e.g. replacements) brought in nothing
+        if round(float(i.get("total") or 0), 2) == 0:
+            continue
         paid_on = _paid_on(i)
         if not paid_on:
             continue
@@ -482,7 +485,6 @@ def _report_pages(data: dict, owner: str, receipts: bool) -> bytes:
     ]
     summary += [
         ["Ausgaben gesamt", _money(totals["expenses"])],
-        ["darin enthaltene Vorsteuer", _money(totals["expense_vat"])],
         [
             "Überschuss" if totals["result"] >= 0 else "Verlust",
             _money(totals["result"]),
