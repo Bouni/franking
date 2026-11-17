@@ -27,7 +27,9 @@ from invio import InvioDB
 
 load_dotenv()
 
-RECEIPT_DIR = Path(db.LABEL_PATH, "receipts")
+RECEIPT_DIR = os.path.realpath(os.path.join(db.LABEL_PATH, "receipts"))
+# Stored receipts are named after their entry, e.g. 12.pdf
+RECEIPT_NAME_RE = re.compile(r"^[0-9]{1,18}\.(pdf|png|jpg)$")
 RECEIPT_TYPES = {
     ".pdf": "application/pdf",
     ".png": "image/png",
@@ -68,6 +70,23 @@ class BookkeepingError(Exception):
 
 def _db():
     return db.connect(SCHEMA)
+
+
+def _receipt_file(name: str | None) -> Path | None:
+    """Path of a stored receipt. Refuse anything that isn't a receipt name
+    or would leave the receipt folder, None then"""
+    if not name or not RECEIPT_NAME_RE.match(name):
+        return None
+    path = os.path.normpath(os.path.join(RECEIPT_DIR, name))
+    if not path.startswith(RECEIPT_DIR + os.sep):
+        return None
+    return Path(path)
+
+
+def _remove_receipt_file(name: str | None):
+    path = _receipt_file(name)
+    if path is not None:
+        path.unlink(missing_ok=True)
 
 
 def _cents(value, field: str) -> int:
@@ -175,8 +194,7 @@ def delete(entry_id: int):
         if row is None:
             raise BookkeepingError("Unknown entry")
         con.execute("DELETE FROM bookkeeping WHERE id = ?", (entry_id,))
-    if row["receipt"]:
-        (RECEIPT_DIR / row["receipt"]).unlink(missing_ok=True)
+    _remove_receipt_file(row["receipt"])
 
 
 def receipt(entry_id: int) -> tuple[Path, str, str] | None:
@@ -185,10 +203,10 @@ def receipt(entry_id: int) -> tuple[Path, str, str] | None:
         row = con.execute(
             "SELECT receipt, receipt_name FROM bookkeeping WHERE id = ?", (entry_id,)
         ).fetchone()
-    if row is None or not row["receipt"]:
+    if row is None:
         return None
-    path = RECEIPT_DIR / row["receipt"]
-    if not path.is_file():
+    path = _receipt_file(row["receipt"])
+    if path is None or not path.is_file():
         return None
     return path, RECEIPT_TYPES[path.suffix], row["receipt_name"] or path.name
 
@@ -211,17 +229,20 @@ def attach_receipt(entry_id: int, filename: str, content: bytes) -> dict:
     if suffix is None:
         raise BookkeepingError("Receipts must be PDF, PNG or JPEG files")
     name = Path(filename or f"receipt{suffix}").name[:200]
-    RECEIPT_DIR.mkdir(parents=True, exist_ok=True)
-    stored = f"{entry_id}{suffix}"
+    stored = f"{int(entry_id)}{suffix}"
+    path = _receipt_file(stored)
+    if path is None:
+        raise BookkeepingError("Unknown entry")
+    os.makedirs(RECEIPT_DIR, exist_ok=True)
     with _db() as con:
         row = con.execute(
             "SELECT receipt FROM bookkeeping WHERE id = ?", (entry_id,)
         ).fetchone()
         if row is None:
             raise BookkeepingError("Unknown entry")
-        (RECEIPT_DIR / stored).write_bytes(content)
-        if row["receipt"] and row["receipt"] != stored:
-            (RECEIPT_DIR / row["receipt"]).unlink(missing_ok=True)
+        path.write_bytes(content)
+        if row["receipt"] != stored:
+            _remove_receipt_file(row["receipt"])
         con.execute(
             "UPDATE bookkeeping SET receipt = ?, receipt_name = ? WHERE id = ?",
             (stored, name, entry_id),
@@ -244,8 +265,7 @@ def remove_receipt(entry_id: int) -> dict:
             "UPDATE bookkeeping SET receipt = NULL, receipt_name = NULL WHERE id = ?",
             (entry_id,),
         )
-        if row["receipt"]:
-            (RECEIPT_DIR / row["receipt"]).unlink(missing_ok=True)
+        _remove_receipt_file(row["receipt"])
         return _entry(
             con.execute(
                 "SELECT * FROM bookkeeping WHERE id = ?", (entry_id,)
