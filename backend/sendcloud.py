@@ -198,12 +198,13 @@ class Sendcloud:
             "country_code": alpha_2(SENDER_COUNTRY),
         }
 
-    def _customs(self, invoice_data: dict) -> tuple[dict, list]:
+    def _customs(self, invoice_data: dict, gift: bool = False) -> tuple[dict, list]:
         """Customs lines from the invoice items, using the product data
         (hsCode, countryOfOrigin, weightG, see apply_product_data). Items
         without a product, like shipping costs, are not declared. Products
         without customs data stop the label, a declaration missing goods
-        would not match the parcel."""
+        would not match the parcel. A gift is declared as a private export
+        instead of a sale."""
         items = []
         for i in invoice_data.get("items", []):
             missing = [f for f in CUSTOMS_FIELDS if not i.get(f)]
@@ -249,8 +250,8 @@ class Sendcloud:
             )
         return {
             "invoice_number": invoice_data.get("invoiceNumber"),
-            "export_reason": "commercial_goods",
-            "export_type": "commercial_b2c",
+            "export_reason": "gift" if gift else "commercial_goods",
+            "export_type": "private" if gift else "commercial_b2c",
             "tax_numbers": {
                 "sender": sender_tax,
                 "receiver": [],
@@ -264,6 +265,7 @@ class Sendcloud:
         receiver: Address,
         shipping_option_code: str,
         weight_g: int,
+        gift: bool = False,
     ) -> dict:
         parcel = {"weight": {"value": weight_g, "unit": "g"}}
         payload = {
@@ -289,7 +291,7 @@ class Sendcloud:
         if receiver.email:
             payload["to_address"]["email"] = receiver.email
         if needs_customs(receiver.country):
-            customs, items = self._customs(invoice_data)
+            customs, items = self._customs(invoice_data, gift)
             payload["customs_information"] = customs
             parcel["parcel_items"] = items
         payload["parcels"] = [parcel]

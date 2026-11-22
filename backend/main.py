@@ -33,6 +33,7 @@ from sendcloud import (
     SendcloudError,
     alpha_2,
     apply_product_data,
+    needs_customs,
     parcel_weight,
     shipping_option,
 )
@@ -289,6 +290,9 @@ async def create_shipping_label(data: dict):
         )
     # DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
     code = shipping_option(customer["countryCode"])
+    # Declared as a gift in the customs data, only asked for GB in the
+    # frontend, ignored where no customs declaration is needed
+    gift = bool(data.get("gift")) and needs_customs(customer["countryCode"])
     # Heavier parcels get the next weight step of the same product
     estimate_g, weight_g = parcel_weight(invoice_data)
     logging.info(
@@ -317,7 +321,11 @@ async def create_shipping_label(data: dict):
         logging.info("DEBUG active, shipping label dryrun")
         debug_label(
             label_file(invoice_number, ".png"),
-            [invoice_number, code, f"{customer['countryCode']} {weight_g}g"],
+            [
+                invoice_number,
+                code,
+                f"{customer['countryCode']} {weight_g}g" + (" gift" if gift else ""),
+            ],
         )
         meta = {
             "carrier": "debug",
@@ -327,7 +335,7 @@ async def create_shipping_label(data: dict):
     else:
         try:
             async with Sendcloud() as sc:
-                result = await sc.announce(invoice_data, address, code, weight_g)
+                result = await sc.announce(invoice_data, address, code, weight_g, gift)
                 # Sendcloud invoices the label later, keep its price for the
                 # open shipping costs
                 try:
@@ -344,9 +352,14 @@ async def create_shipping_label(data: dict):
             **result,
         }
 
+    if gift:
+        meta["gift"] = True
     meta["created"] = datetime.now(UTC).isoformat()
     label_file(invoice_number, ".json").write_text(json.dumps(meta))
-    logging.info(f"Shipping label {code} ({weight_g}g) created for {invoice_number}")
+    logging.info(
+        f"Shipping label {code} ({weight_g}g{', gift' if gift else ''}) created "
+        f"for {invoice_number}"
+    )
 
     tracking_email = await send_tracking_email(invoice_data, meta)
     if tracking_email["sent"]:
@@ -355,7 +368,8 @@ async def create_shipping_label(data: dict):
     return JSONResponse(
         {
             "success": True,
-            "msg": f"Shipping label {code} ({weight_g} g) created",
+            "msg": f"Shipping label {code} ({weight_g} g"
+            f"{', gift' if gift else ''}) created",
             "label": meta,
             "tracking_email": tracking_email,
         }
