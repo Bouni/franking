@@ -20,12 +20,26 @@ const manual = computed(() =>
 );
 const manualDialog = ref(false);
 
+// Parcels to GB can be declared as a gift in the customs data, ask first
+const GIFT_COUNTRIES = new Set(["GB"]);
+const askGift = computed(() =>
+  GIFT_COUNTRIES.has(props.countryCode?.toUpperCase()),
+);
+const giftDialog = ref(false);
+
 function purchase() {
   if (manual.value) {
     manualDialog.value = true;
+  } else if (askGift.value) {
+    giftDialog.value = true;
   } else {
     createLabel(props.invoiceId);
   }
+}
+
+function purchaseWith(gift: boolean) {
+  giftDialog.value = false;
+  createLabel(props.invoiceId, gift);
 }
 
 const store = useAppStore();
@@ -83,6 +97,39 @@ const { createLabel } = store;
 
         <v-btn color="primary" variant="flat" @click="manualDialog = false">
           Got it
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog v-model="giftDialog" max-width="520">
+    <v-card prepend-icon="mdi-gift" title="Ship as a gift?">
+      <v-card-text>
+        This parcel goes to
+        <strong>{{ countryCode?.toUpperCase() }}</strong> and needs a customs
+        declaration. Should it be declared as a gift instead of a sale?
+      </v-card-text>
+
+      <v-card-actions>
+        <v-btn @click="giftDialog = false">Cancel</v-btn>
+        <v-spacer />
+
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-cart"
+          variant="outlined"
+          @click="purchaseWith(false)"
+        >
+          No, sale
+        </v-btn>
+
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-gift"
+          variant="flat"
+          @click="purchaseWith(true)"
+        >
+          Yes, gift
         </v-btn>
       </v-card-actions>
     </v-card>

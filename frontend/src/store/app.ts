@@ -397,12 +397,14 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  async function createLabel(invoice_id: string) {
+  // gift declares the parcel as a gift in the customs data (asked for GB)
+  async function createLabel(invoice_id: string, gift = false) {
     isLoading.value = { id: invoice_id, action: "createLabel" };
 
     try {
       const response = await api.post("/shipping/label", {
         invoice_id,
+        gift,
       });
       if (!response.data.success) {
         throw new Error(response.data.msg);
