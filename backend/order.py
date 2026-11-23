@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 
 import pycountry
 
-from sendcloud import Sendcloud, alpha_2, label_weight
+from sendcloud import Sendcloud, alpha_2, destination, label_weight
 
 # Public order form (order.bouni.de): limit how many orders one client can submit
 RATE_LIMIT = 5
@@ -125,7 +125,8 @@ def validate(data: dict, products: list) -> tuple[dict, list]:
         raise OrderError("Email address is invalid")
     if not pycountry.countries.get(alpha_2=values["country"].upper()):
         raise OrderError("Country is invalid")
-    values["country"] = values["country"].upper()
+    # Overseas territories with a French postcode ship as their own country
+    values["country"] = destination(values["country"], values["postalcode"])
 
     # State/province, only for countries that need it
     region_codes = {r["code"] for r in regions(values["country"])}

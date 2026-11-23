@@ -18,25 +18,25 @@ from fastapi.staticfiles import StaticFiles
 import bookkeeping
 import db
 import order
+import payments
 import settings
 import stock
 from invio import Invio, InvioDB
 from mail import Mail
 from models import Address
 from ntfy import send_notification
-import payments
 from payments import payment_check_loop, run_payment_check
-from tracking import tracking_check_loop
 from printer import MFC_IP, BrotherMFC, debug_label, print_shipping_label
 from sendcloud import (
     Sendcloud,
     SendcloudError,
-    alpha_2,
     apply_product_data,
+    destination,
     needs_customs,
     parcel_weight,
     shipping_option,
 )
+from tracking import tracking_check_loop
 
 load_dotenv()
 
@@ -263,14 +263,16 @@ async def create_shipping_label(data: dict):
     invoice_data = await load_invoice(data.get("invoice_id", ""))
     customer = invoice_data["customer"]
     invoice_number = invoice_data["invoiceNumber"]
+    # Overseas territories are stored as France by older orders
+    country = destination(customer["countryCode"], customer.get("postalCode") or "")
 
     # No Sendcloud product for these countries, the label is bought manually
-    if alpha_2(customer["countryCode"]) in order.MANUAL_SHIPPING:
+    if country in order.MANUAL_SHIPPING:
         return JSONResponse(
             {
                 "success": False,
                 "msg": f"Invoice {invoice_number} ships to "
-                f"{customer['countryCode']}: buy a DHL label for a 2kg Paket "
+                f"{country}: buy a DHL label for a 2kg Paket "
                 "manually.",
             }
         )
@@ -289,10 +291,10 @@ async def create_shipping_label(data: dict):
             {"success": False, "msg": f"Invoice {invoice_number} already has a label."}
         )
     # DHL Kleinpaket within Germany, DHL Warenpost International Premium otherwise
-    code = shipping_option(customer["countryCode"])
-    # Declared as a gift in the customs data, only asked for GB in the
-    # frontend, ignored where no customs declaration is needed
-    gift = bool(data.get("gift")) and needs_customs(customer["countryCode"])
+    code = shipping_option(country)
+    # Declared as a gift in the customs data, ignored where no customs
+    # declaration is needed
+    gift = bool(data.get("gift")) and needs_customs(country)
     # Heavier parcels get the next weight step of the same product
     estimate_g, weight_g = parcel_weight(invoice_data)
     logging.info(
@@ -311,7 +313,7 @@ async def create_shipping_label(data: dict):
         address=customer["address"],
         city=customer["city"],
         postcode=customer["postalCode"],
-        country=customer["countryCode"],
+        country=country,
         region=customer.get("region") or "",
         phone=customer.get("phone"),
         email=customer.get("email") or "",
@@ -324,7 +326,7 @@ async def create_shipping_label(data: dict):
             [
                 invoice_number,
                 code,
-                f"{customer['countryCode']} {weight_g}g" + (" gift" if gift else ""),
+                f"{country} {weight_g}g" + (" gift" if gift else ""),
             ],
         )
         meta = {
@@ -339,7 +341,7 @@ async def create_shipping_label(data: dict):
                 # Sendcloud invoices the label later, keep its price for the
                 # open shipping costs
                 try:
-                    quote = await sc.quote(customer["countryCode"], weight_g)
+                    quote = await sc.quote(country, weight_g)
                     result["price"] = quote["price"]
                 except SendcloudError as e:
                     logging.error(f"No price for the label of {invoice_number}: {e}")
@@ -748,13 +750,16 @@ async def get_products():
 
 
 @app.get("/api/order/shipping")
-async def order_shipping(country: str, goods_g: float = 0):
+async def order_shipping(country: str, goods_g: float = 0, postcode: str = ""):
     # Only for the price shown in the form, submitting recalculates the weight
     # from the product data
     if not order.valid_country(country):
         return JSONResponse({"success": False, "msg": "Invalid country"})
     if not 0 <= goods_g <= order.MAX_GOODS_G:
         return JSONResponse({"success": False, "msg": "Invalid weight"})
+    if len(postcode) > 20:
+        return JSONResponse({"success": False, "msg": "Invalid postal code"})
+    country = destination(country, postcode)
     try:
         quote = await order.shipping_quote(country, goods_g)
     except (SendcloudError, ValueError) as e:

@@ -2,6 +2,7 @@ import base64
 import logging
 import math
 import os
+import re
 from datetime import UTC, datetime
 
 import httpx
@@ -53,6 +54,29 @@ def alpha_2(country: str) -> str:
     if c := pycountry.countries.get(alpha_3=country.upper()):
         return c.alpha_2
     raise ValueError(f"Unknown country code {country}")
+
+
+# French overseas territories have French postcodes, but DHL and Sendcloud
+# treat them as countries of their own, and they are outside the EU VAT area
+# (customs declaration needed). Saint-Barthélemy and Saint-Martin share the
+# 971 prefix with Guadeloupe and have one postcode each.
+FRENCH_OVERSEAS_POSTCODES = {"97133": "BL", "97150": "MF"}
+FRENCH_OVERSEAS_PREFIXES = {
+    "971": "GP", "972": "MQ", "973": "GF", "974": "RE", "975": "PM",
+    "976": "YT", "986": "WF", "987": "PF", "988": "NC",
+}  # fmt: skip
+
+
+def destination(country_code: str, postcode: str = "") -> str:
+    """Alpha-2 code of the country the parcel actually goes to, the overseas
+    territory for French addresses with an overseas postcode"""
+    country = alpha_2(country_code)
+    if country != "FR":
+        return country
+    code = re.sub(r"\s", "", postcode or "")
+    return FRENCH_OVERSEAS_POSTCODES.get(code) or FRENCH_OVERSEAS_PREFIXES.get(
+        code[:3], country
+    )
 
 
 def shipping_option(country_code: str) -> str:

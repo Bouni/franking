@@ -726,28 +726,37 @@ watch(
 let shippingTimer: ReturnType<typeof setTimeout> | undefined;
 let shippingRequest = 0;
 
+// French overseas territories (postcodes 97x/98x) are priced as countries of
+// their own, the postcode only matters there
+const overseasPostcode = computed(() => {
+  const postcode = order.value.postalcode.replaceAll(/\s/g, "");
+  return order.value.country === "FR" && /^9[78]\d{3}$/.test(postcode)
+    ? postcode
+    : "";
+});
+
+watch([() => order.value.country, overseasPostcode], () => {
+  shipping.value = null;
+});
+
 watch(
-  () => order.value.country,
-  () => {
-    shipping.value = null;
+  [() => order.value.country, goodsWeight, overseasPostcode],
+  ([country, weight, postcode]) => {
+    clearTimeout(shippingTimer);
+    if (!country) {
+      shippingLoading.value = false;
+      return;
+    }
+    shippingLoading.value = true;
+    const request = ++shippingRequest;
+    shippingTimer = setTimeout(async () => {
+      const result = await orderStore.fetchShipping(country, weight, postcode);
+      if (request !== shippingRequest) return;
+      shipping.value = result;
+      shippingLoading.value = false;
+    }, 300);
   },
 );
-
-watch([() => order.value.country, goodsWeight], ([country, weight]) => {
-  clearTimeout(shippingTimer);
-  if (!country) {
-    shippingLoading.value = false;
-    return;
-  }
-  shippingLoading.value = true;
-  const request = ++shippingRequest;
-  shippingTimer = setTimeout(async () => {
-    const result = await orderStore.fetchShipping(country, weight);
-    if (request !== shippingRequest) return;
-    shipping.value = result;
-    shippingLoading.value = false;
-  }, 300);
-});
 
 // The US only accepts goods from private senders as gifts, explain that
 const usNotice = ref(false);
