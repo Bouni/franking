@@ -51,13 +51,15 @@ export const useOrderStore = defineStore("order", () => {
     }
   }
 
+  // The postcode tells French overseas territories apart from France
   async function fetchShipping(
     country: string,
     goodsG: number,
+    postcode = "",
   ): Promise<Shipping | null> {
     try {
       const response = await api.get("/order/shipping", {
-        params: { country, goods_g: goodsG },
+        params: { country, goods_g: goodsG, postcode },
       });
       return response.data.success ? response.data : null;
     } catch {
