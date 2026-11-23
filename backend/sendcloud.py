@@ -146,11 +146,31 @@ def invoice_date(value: str | None) -> datetime | None:
 
 
 class SendcloudError(Exception):
-    def __init__(self, msg: str, status_code: int | None = None):
+    def __init__(self, msg: str, status_code: int | None = None, pointers: tuple = ()):
         super().__init__(msg)
         # Text that may be shown to the user (Sendcloud's error detail)
         self.user_message = msg
         self.status_code = status_code
+        # Fields Sendcloud complained about, e.g. "house_number"
+        self.pointers = pointers
+
+
+# House number in front ("338 rue des Flamboyants", "12 bis rue X") or at
+# the end ("Hauptstr. 12a", "Cotta B 18")
+_NUMBER = r"\d+(?:\s?(?:bis|ter|quater)\b|\s?[a-z]\b)?(?:\s?[-/]\s?\d+[a-z]?)?"
+_NUMBER_FIRST = re.compile(rf"^({_NUMBER})\s*,?\s+(\D.*)$", re.IGNORECASE)
+_NUMBER_LAST = re.compile(rf"^(.*\D)\s+({_NUMBER})$", re.IGNORECASE)
+
+
+def split_house_number(address: str) -> tuple[str, str] | None:
+    """Street and house number of an address line, None if there's no
+    number to split off"""
+    address = address.strip()
+    if m := _NUMBER_FIRST.match(address):
+        return m.group(2).strip(), m.group(1)
+    if m := _NUMBER_LAST.match(address):
+        return m.group(1).strip(" ,"), m.group(2)
+    return None
 
 
 class Sendcloud:
@@ -181,9 +201,13 @@ class Sendcloud:
                     )
                     or response.text
                 )
+                pointers = tuple(
+                    (e.get("source") or {}).get("pointer") or "" for e in errors
+                )
             except ValueError:
                 msg = response.text
-            raise SendcloudError(msg, response.status_code)
+                pointers = ()
+            raise SendcloudError(msg, response.status_code, pointers)
         return response.json()
 
     async def quote(self, to_country: str, weight_g: int) -> dict:
@@ -320,7 +344,20 @@ class Sendcloud:
             parcel["parcel_items"] = items
         payload["parcels"] = [parcel]
 
-        data = (await self._post("/shipments/announce", payload)).get("data", {})
+        try:
+            response = await self._post("/shipments/announce", payload)
+        except SendcloudError as e:
+            # Sendcloud splits the house number off the address line itself
+            # for most countries, others (e.g. Réunion) need it separately
+            split = split_house_number(receiver.address)
+            if not any(p.endswith("house_number") for p in e.pointers) or not split:
+                raise
+            street, number = split
+            logging.info(f"Retrying with street {street!r}, house number {number!r}")
+            payload["to_address"]["address_line_1"] = street
+            payload["to_address"]["house_number"] = number
+            response = await self._post("/shipments/announce", payload)
+        data = response.get("data", {})
         p = data["parcels"][0]
         if not p.get("label_file"):
             raise SendcloudError(f"No label returned: {data.get('errors')}")
